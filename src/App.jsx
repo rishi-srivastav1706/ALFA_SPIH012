@@ -361,7 +361,24 @@ export default function App() {
           setAttempts(atts || []);
         }
       } catch (err) {
-        console.error("Error loading Supabase tables:", err.message);
+        console.warn("Error loading Supabase tables, falling back to localStorage:", err.message);
+        const localStuds = localStorage.getItem("tut_students");
+        const localProg = localStorage.getItem("tut_progress");
+        const localAtts = localStorage.getItem("tut_attempts");
+
+        if (localStuds && localProg && localAtts) {
+          setStudents(JSON.parse(localStuds));
+          setProgress(JSON.parse(localProg));
+          setAttempts(JSON.parse(localAtts));
+        } else {
+          // Seed defaults
+          setStudents(INITIAL_STUDENTS);
+          setProgress(INITIAL_PROGRESS);
+          setAttempts(INITIAL_ATTEMPTS);
+          localStorage.setItem("tut_students", JSON.stringify(INITIAL_STUDENTS));
+          localStorage.setItem("tut_progress", JSON.stringify(INITIAL_PROGRESS));
+          localStorage.setItem("tut_attempts", JSON.stringify(INITIAL_ATTEMPTS));
+        }
       }
     };
 
@@ -591,7 +608,24 @@ export default function App() {
 
       loadStudentSession(newStudent.id);
     } catch (err) {
-      addToast(`Error adding student profile: ${err.message}`, "error");
+      console.warn("Supabase create student failed, writing to localStorage:", err.message);
+      const newId = "s-" + Date.now();
+      const localStudent = { ...studentRecord, id: newId };
+      const updatedStuds = [...students, localStudent];
+      const newLocalProg = { student_id: newId, subject: "Mathematics", topic: "Fractions", mastery_score: 0.0, total_attempts: 0, correct_attempts: 0 };
+      const updatedProg = [...progress, newLocalProg];
+      
+      setStudents(updatedStuds);
+      setProgress(updatedProg);
+      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
+      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+      
+      addToast(`Added student ${selfName.trim()} successfully! (Local storage fallback)`, "success");
+      setSelfName("");
+      setSelfPin("");
+      setIsAddingStudentSelf(false);
+
+      loadStudentSession(newId);
     }
   };
 
@@ -696,7 +730,22 @@ export default function App() {
       setAddPin("");
       setIsAddingStudent(false);
     } catch (err) {
-      addToast(`Error adding student: ${err.message}`, "error");
+      console.warn("Supabase add student failed, writing to localStorage:", err.message);
+      const newId = "s-" + Date.now();
+      const localStudent = { ...studentRecord, id: newId };
+      const updatedStuds = [...students, localStudent];
+      const newLocalProg = { student_id: newId, subject: "Mathematics", topic: "Fractions", mastery_score: 0.0, total_attempts: 0, correct_attempts: 0 };
+      const updatedProg = [...progress, newLocalProg];
+      
+      setStudents(updatedStuds);
+      setProgress(updatedProg);
+      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
+      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+
+      addToast(`Added student ${addName.trim()} to registry! (Local storage fallback)`, "success");
+      setAddName("");
+      setAddPin("");
+      setIsAddingStudent(false);
     }
   };
 
@@ -720,7 +769,23 @@ export default function App() {
         exitStudentSession();
       }
     } catch (err) {
-      addToast(`Error deleting student: ${err.message}`, "error");
+      console.warn("Supabase delete failed, syncing locally:", err.message);
+      const updatedStuds = students.filter(s => s.id !== id);
+      const updatedProg = progress.filter(p => p.student_id !== id);
+      const updatedAttempts = attempts.filter(a => a.student_id !== id);
+
+      setStudents(updatedStuds);
+      setProgress(updatedProg);
+      setAttempts(updatedAttempts);
+
+      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
+      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+      localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
+
+      addToast(`Removed ${name} from roster (local storage fallback).`, "info");
+      if (activeStudent && activeStudent.id === id) {
+        exitStudentSession();
+      }
     }
   };
 
@@ -756,7 +821,23 @@ export default function App() {
         loadStudentSession(id);
       }
     } catch (err) {
-      addToast(`Error resetting progress: ${err.message}`, "error");
+      console.warn("Supabase reset failed, resetting locally:", err.message);
+      const updatedStuds = students.map(s => s.id === id ? { ...s, difficulty: 1 } : s);
+      const updatedProg = progress.map(p => p.student_id === id ? { ...p, mastery_score: 0, total_attempts: 0, correct_attempts: 0 } : p);
+      const updatedAttempts = attempts.filter(a => a.student_id !== id);
+
+      setStudents(updatedStuds);
+      setProgress(updatedProg);
+      setAttempts(updatedAttempts);
+
+      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
+      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+      localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
+
+      addToast(`Tutoring history reset for ${name} (local storage fallback).`, "info");
+      if (activeStudent && activeStudent.id === id) {
+        loadStudentSession(id);
+      }
     }
   };
 
