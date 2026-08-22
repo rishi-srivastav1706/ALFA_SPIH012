@@ -388,8 +388,7 @@ export default function App() {
   const [registerLanguage, setRegisterLanguage] = useState("English");
   const [registerGrade, setRegisterGrade] = useState(3);
 
-  // HF Token config (available in profile page)
-  const [hfTokenInput, setHfTokenInput] = useState(() => localStorage.getItem("tut_hf_token") || "");
+
 
   // Achievements/Badges Popup
   const [badgePopup, setBadgePopup] = useState(null);
@@ -2826,51 +2825,6 @@ Write a simple explanation explaining the correct concept.
                   </div>
                 </div>
 
-                {/* API Config Panel */}
-                <div className="glass-card" style={{ padding: '1.5rem' }}>
-                  <h3 style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><Sliders style={{ color: 'var(--primary)', width: 20, height: 20 }} /> API Key Settings</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Hugging Face Read Token</label>
-                      <input 
-                        type="password"
-                        className="form-control"
-                        value={hfTokenInput}
-                        onChange={(e) => setHfTokenInput(e.target.value)}
-                        placeholder="hf_..." 
-                        style={{ fontSize: '0.85rem', padding: '0.45rem' }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-primary" 
-                        style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          localStorage.setItem("tut_hf_token", hfTokenInput.trim());
-                          addToast("Hugging Face API Token updated successfully!", "success");
-                        }}
-                      >
-                        Save
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-danger" 
-                        style={{ padding: '0.4rem', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          setHfTokenInput("");
-                          localStorage.removeItem("tut_hf_token");
-                          addToast("Hugging Face API Token cleared.", "info");
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', lineHeight: 1.3 }}>
-                      Providing your own token enables real Llama-3-8B concept evaluations.
-                    </small>
-                  </div>
-                </div>
               </div>
             </div>
           </section>
