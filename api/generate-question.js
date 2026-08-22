@@ -224,9 +224,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    const gradeNum = Number(String(grade).replace(/\D/g, "")) || 3;
+    let mindsetRules = "";
+    if (gradeNum >= 1 && gradeNum <= 3) {
+      mindsetRules = "Mindset Rules (Grades 1-3): The student is 6-8 years old. Use extremely simple words, short sentences, and concrete examples (like toys, fruits, candies, or animals). Do not ask complex or abstract questions. Keep it simple, clear, and easy to comprehend.";
+    } else if (gradeNum >= 4 && gradeNum <= 7) {
+      mindsetRules = "Mindset Rules (Grades 4-7): The student is 9-12 years old. Use intermediate vocabulary. You can introduce basic abstract ideas (like fractions, maps, ecosystems, or lifecycles) and multi-step reasoning. Keep it friendly and engaging.";
+    } else {
+      mindsetRules = "Mindset Rules (Grades 8-10): The student is 13-15 years old. Use academic vocabulary, official formulas, algebra, scientific processes (like chemical bonds or cell division), and detailed historical context. The questions should challenge their critical thinking.";
+    }
+
     const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 You are EDUTOR, an encouraging, child-friendly tutor. Your job is to generate a single practice question for a student in Grade ${grade} for the subject "${subject}".
 The difficulty level is ${difficulty} out of 5 (1 is simple recall/vocabulary, 5 is analytical reasoning/problem solving).
+
+${mindsetRules}
+
 The question and hint must be written in the requested language: ${language}.
 For language subjects like Hindi or Telugu, ensure both question and hint are written exclusively in that language.
 Ensure the response matches this JSON format:

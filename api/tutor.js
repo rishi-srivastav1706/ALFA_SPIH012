@@ -26,10 +26,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    const gradeNum = Number(String(userGrade).replace(/\D/g, "")) || 3;
+    let mindsetRules = "";
+    if (gradeNum >= 1 && gradeNum <= 3) {
+      mindsetRules = "Mindset Rules (Grades 1-3): The student is 6-8 years old. Keep the hint extremely simple, short, and use concrete references (like fruits or toys). Do not write complex clues.";
+    } else if (gradeNum >= 4 && gradeNum <= 7) {
+      mindsetRules = "Mindset Rules (Grades 4-7): The student is 9-12 years old. Provide hints using intermediate vocabulary and simple clues to guide their step-by-step reasoning.";
+    } else {
+      mindsetRules = "Mindset Rules (Grades 8-10): The student is 13-15 years old. Provide hints using academic terms, reference formulas, and prompt them to think of the theoretical concepts.";
+    }
+
     const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
 Provide a simple, conceptual hint or visual explanation for the question below.
-Ensure the explanation vocabulary and difficulty match the mindset of a ${userGrade} student.
+
+${mindsetRules}
+
 Provide the hint in the requested tutoring language (${userLang}).
 Keep the length under 4 sentences.
 <|eot_id|><|start_header_id|>user<|end_header_id|>

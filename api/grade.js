@@ -28,10 +28,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    const gradeNum = Number(String(userGrade).replace(/\D/g, "")) || 3;
+    let mindsetRules = "";
+    if (gradeNum >= 1 && gradeNum <= 3) {
+      mindsetRules = "Mindset Rules (Grades 1-3): The student is 6-8 years old. Write the explanation using extremely simple words, short sentences, and concrete examples (like toys, fruits, or animals). Keep the tone encouraging, warm, and easy to understand.";
+    } else if (gradeNum >= 4 && gradeNum <= 7) {
+      mindsetRules = "Mindset Rules (Grades 4-7): The student is 9-12 years old. Use intermediate vocabulary and explain concepts with step-by-step reasoning. Keep it friendly and engaging.";
+    } else {
+      mindsetRules = "Mindset Rules (Grades 8-10): The student is 13-15 years old. Use academic terms, reference official formulas, and explain the underlying logic/theory.";
+    }
+
     const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
 Review the student's answer to the practice question and grade their conceptual understanding.
-Ensure the explanation vocabulary and difficulty match the mindset of a ${userGrade} student.
+
+${mindsetRules}
+
 For language subjects like Hindi or Telugu, ensure both explanation and evaluation are in that language.
 Ensure the response matches this JSON format:
 {
