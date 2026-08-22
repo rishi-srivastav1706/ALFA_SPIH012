@@ -36,18 +36,17 @@ export default async function handler(req, res) {
       mindsetRules = "Mindset Rules (Grades 8-10): The student is 13-15 years old. Provide hints using academic terms, reference formulas, and prompt them to think of the theoretical concepts.";
     }
 
-    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
+    const prompt = `System: You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
 Provide a simple, conceptual hint or visual explanation for the question below.
 
 ${mindsetRules}
 
 Provide the hint in the requested tutoring language (${userLang}).
 Keep the length under 4 sentences.
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-Question: ${questionText}
+
+User: Question: ${questionText}
 Language: ${userLang}
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>`;
+Assistant:`;
 
     const apiResponse = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
       method: "POST",
@@ -67,7 +66,15 @@ Language: ${userLang}
     }
 
     const data = await apiResponse.json();
-    let text = data[0]?.generated_text || "Try visualizing the problem step-by-step!";
+    let text = data[0]?.generated_text || "";
+
+    // Strip the prompt prefix if it was recycled in the response
+    if (text.startsWith(prompt)) {
+      text = text.substring(prompt.length);
+    }
+    if (!text.trim()) {
+      text = "Try visualizing the problem step-by-step!";
+    }
     
     return res.status(200).json({ hint: text.trim() });
   } catch (err) {

@@ -38,8 +38,7 @@ export default async function handler(req, res) {
       mindsetRules = "Mindset Rules (Grades 8-10): The student is 13-15 years old. Use academic terms, reference official formulas, and explain the underlying logic/theory.";
     }
 
-    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
+    const prompt = `System: You are EDUTOR, a child-friendly 1:1 tutor for ${userGrade} students in ${userSubject}.
 Review the student's answer to the practice question and grade their conceptual understanding.
 
 ${mindsetRules}
@@ -51,10 +50,10 @@ Ensure the response matches this JSON format:
   "explanation": "<explain in friendly terms in ${userLang}, offering constructive support if they missed the concept>"
 }
 Do not return any text before or after the JSON block.
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-Question: ${questionText}
+
+User: Question: ${questionText}
 Student's Answer: ${studentAnswer}
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>`;
+Assistant:`;
 
     const apiResponse = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
       method: "POST",
@@ -75,6 +74,11 @@ Student's Answer: ${studentAnswer}
 
     const data = await apiResponse.json();
     let text = data[0]?.generated_text || "";
+
+    // Strip the prompt prefix if it was recycled in the response
+    if (text.startsWith(prompt)) {
+      text = text.substring(prompt.length);
+    }
     
     let jsonResult;
     try {

@@ -34,17 +34,16 @@ Question: ${questionText}`;
       promptMessage += "\n(Note: An image of the worksheet was uploaded. Break down the visual elements step-by-step.)";
     }
 
-    const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-You are EDUTOR, a child-friendly homework solver and tutor.
+    const prompt = `System: You are EDUTOR, a child-friendly homework solver and tutor.
 Solve the homework question step-by-step.
 Ensure the explanation vocabulary and difficulty match the mindset of a ${userGrade} student.
 Use simple, clear formatting with bullet points.
 Encourage the student and ensure the content is 100% correct.
 For language subjects like Hindi or Telugu, write exclusively in that language.
 Keep the answer friendly and under 5 steps.
-<|eot_id|><|start_header_id|>user<|end_header_id|>
-${promptMessage}
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>`;
+
+User: ${promptMessage}
+Assistant:`;
 
     const apiResponse = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
       method: "POST",
@@ -64,7 +63,15 @@ ${promptMessage}
     }
 
     const data = await apiResponse.json();
-    let text = data[0]?.generated_text || "Let's work through this problem step-by-step together!";
+    let text = data[0]?.generated_text || "";
+
+    // Strip the prompt prefix if it was recycled in the response
+    if (text.startsWith(prompt)) {
+      text = text.substring(prompt.length);
+    }
+    if (!text.trim()) {
+      text = "Let's work through this problem step-by-step together!";
+    }
 
     return res.status(200).json({ answer: text.trim() });
   } catch (err) {
