@@ -37,7 +37,9 @@ import {
   Eye,
   EyeOff,
   Mic,
-  MicOff
+  MicOff,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { 
@@ -351,6 +353,16 @@ export default function App() {
   // Navigation & Routing: landing-page, teacher-dashboard, student-portal, settings
   const [activeView, setActiveView] = useState("landing-page");
   const [toasts, setToasts] = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem("tut_theme") || "light");
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.body.classList.add("dark-theme");
+    } else {
+      document.body.classList.remove("dark-theme");
+    }
+    localStorage.setItem("tut_theme", theme);
+  }, [theme]);
 
   // Local Database States
   const [students, setStudents] = useState([]);
@@ -1725,6 +1737,31 @@ Write a simple explanation explaining the correct concept.
             <GraduationCap style={{ strokeWidth: 2.5 }} />
             <span>EDUTOR</span>
           </div>
+
+          {/* Theme Switch Button */}
+          <button 
+            onClick={() => setTheme(prev => prev === "light" ? "dark" : "light")}
+            style={{
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.15)',
+              padding: '0.5rem',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--primary)',
+              marginLeft: '1rem',
+              marginRight: 'auto',
+              transition: 'var(--transition-smooth)',
+              outline: 'none'
+            }}
+            className="theme-toggle-btn"
+            title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Theme`}
+          >
+            {theme === 'light' ? <Moon style={{ width: 16, height: 16 }} /> : <Sun style={{ width: 16, height: 16 }} />}
+          </button>
+
           <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button 
               className={`nav-tab ${activeView === "landing-page" ? "active" : ""}`}

@@ -1468,3 +1468,108 @@ svg path:hover, svg rect:hover {
 .listening-wiggle {
   animation: listeningWiggle 0.5s ease-in-out infinite;
 }
+
+/* Dark Theme Variables & Styles */
+body.dark-theme {
+  --bg-main: #0b0f19;
+  --bg-dark: #0f172a;
+  --bg-card: rgba(15, 23, 42, 0.9);
+  --border-card: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(99, 102, 241, 0.4);
+  
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+}
+
+body.dark-theme {
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+}
+
+body.dark-theme header {
+  background: rgba(15, 23, 42, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .nav-tab:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.dark-theme input, body.dark-theme select, body.dark-theme textarea {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+body.dark-theme input:focus, body.dark-theme select:focus, body.dark-theme textarea:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+body.dark-theme .modal {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .badge-card.locked {
+  background: rgba(30, 41, 59, 0.5) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
+}
+
+body.dark-theme .student-card {
+  background: #0f172a;
+}
+
+body.dark-theme .session-sidebar {
+  background: #0f172a;
+}
+
+body.dark-theme .chat-panel {
+  background: #0f172a;
+}
+
+body.dark-theme .chat-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme table th {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+body.dark-theme table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.dark-theme .message.student .msg-bubble {
+  background: #1e293b;
+  color: #fff;
+}
+
+body.dark-theme .message.tutor .msg-bubble {
+  background: rgba(99, 102, 241, 0.15);
+  color: #fff;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+body.dark-theme .badge-unlock-popup {
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+
+body.dark-theme .avatar {
+  background: rgba(99, 102, 241, 0.2) !important;
+  color: #818cf8 !important;
+}
+
+body.dark-theme .logo {
+  background: linear-gradient(120deg, #60a5fa, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
