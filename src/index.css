@@ -1412,3 +1412,29 @@ td {
 svg path:hover, svg rect:hover {
   filter: brightness(0.95);
 }
+
+/* Voice Commands & Chatbot Mascot Animations */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5);
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+    border-color: rgba(99, 102, 241, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    border-color: rgba(99, 102, 241, 0.5);
+  }
+}
+
+@keyframes listeningWiggle {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-3px) rotate(-4deg) scale(1.05); }
+  75% { transform: translateY(-3px) rotate(4deg) scale(1.05); }
+}
+
+.listening-wiggle {
+  animation: listeningWiggle 0.5s ease-in-out infinite;
+}

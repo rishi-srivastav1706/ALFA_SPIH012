@@ -35,7 +35,9 @@ import {
   Settings,
   Check,
   Eye,
-  EyeOff
+  EyeOff,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { 
@@ -297,6 +299,127 @@ export default function App() {
   const [customQuestionText, setCustomQuestionText] = useState("");
   const [customImage, setCustomImage] = useState(null); // Simulated image base64
   const [customImageName, setCustomImageName] = useState("");
+
+  // Voice Command & Dictation States
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  
+  const studentAnswerRef = useRef("");
+  const customQuestionTextRef = useRef("");
+  
+  useEffect(() => {
+    studentAnswerRef.current = studentAnswer;
+  }, [studentAnswer]);
+  
+  useEffect(() => {
+    customQuestionTextRef.current = customQuestionText;
+  }, [customQuestionText]);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (e) => {
+        const resultText = e.results[0][0].transcript;
+        const lowerResult = resultText.toLowerCase().trim();
+        
+        const isSubmitCmd = lowerResult === "submit" || 
+                            lowerResult === "भेजें" || 
+                            lowerResult === "भेजो" || 
+                            lowerResult === "सेंड" || 
+                            lowerResult === "సబ్మిట్" ||
+                            lowerResult === "పంపించు";
+                            
+        const isHintCmd = lowerResult === "reveal hint" || 
+                          lowerResult === "hint" || 
+                          lowerResult === "मदद" || 
+                          lowerResult === "इशारा" ||
+                          lowerResult === "సహాయం" ||
+                          lowerResult === "हिँट" ||
+                          lowerResult === "హింట్";
+                          
+        const isReadCmd = lowerResult === "read question" || 
+                          lowerResult === "read" || 
+                          lowerResult === "सवाल पढ़ो" || 
+                          lowerResult === "చదువు";
+
+        if (isSubmitCmd) {
+          if (activeChatMode === "challenge") {
+            const currentAns = studentAnswerRef.current;
+            if (currentAns.trim()) {
+              handleSubmitAnswer();
+            } else {
+              addToast("Answer is empty. Speak your answer first, then say submit!", "warning");
+            }
+          } else {
+            const currentQuest = customQuestionTextRef.current;
+            if (currentQuest.trim()) {
+              handleCustomSolveSubmit();
+            } else {
+              addToast("Question is empty. Speak your question first, then say submit!", "warning");
+            }
+          }
+        } else if (isHintCmd) {
+          setHintVisible(true);
+          addToast("Hint revealed by voice command!", "success");
+        } else if (isReadCmd) {
+          if (activeQuestion?.question_text) {
+            handleSpeak(activeQuestion.question_text);
+            addToast("Reading question...", "info");
+          }
+        } else {
+          if (activeChatMode === "challenge") {
+            setStudentAnswer(prev => prev ? prev + " " + resultText : resultText);
+          } else {
+            setCustomQuestionText(prev => prev ? prev + " " + resultText : resultText);
+          }
+          addToast(`Heard: "${resultText}"`, "info");
+        }
+      };
+
+      rec.onerror = (e) => {
+        console.error("Speech recognition error:", e);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, [activeStudent, activeChatMode, activeQuestion]);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      addToast("Speech recognition is not supported on this browser. Try Chrome or Edge!", "error");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      const langMap = {
+        "English": "en-US",
+        "Hindi": "hi-IN",
+        "Telugu": "te-IN"
+      };
+      recognitionRef.current.lang = langMap[activeStudent?.language] || "en-US";
+      
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error("Failed to start speech recognition:", err);
+      }
+    }
+  };
 
   // Typing Animation State for Landing Page values
   const VALUES = [
@@ -2245,6 +2368,53 @@ Write a simple explanation explaining the correct concept.
                     </div>
                   </div>
 
+                  {/* Fractions Buddy Mascot */}
+                  <div 
+                    className="mascot-card"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%)',
+                      border: '1px solid rgba(99, 102, 241, 0.12)',
+                      borderRadius: '20px',
+                      padding: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '0.5rem',
+                      marginTop: '1rem',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {isListening && (
+                      <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        border: '2px solid var(--primary)',
+                        borderRadius: '20px',
+                        animation: 'pulseGlow 1.5s infinite'
+                      }}></div>
+                    )}
+                    
+                    <div className={isListening ? "listening-wiggle" : ""} style={{ width: '60px', height: '60px', position: 'relative' }}>
+                      <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.06))' }}>
+                        <path d="M 50 50 L 50 10 A 40 40 0 0 1 90 50 Z" fill="#6366f1" />
+                        <path d="M 50 50 L 90 50 A 40 40 0 1 1 50 10 Z" fill="#e2e8f0" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#fff" strokeWidth="3" />
+                        <circle cx="42" cy="46" r="4" fill="#1e293b" />
+                        <circle cx="58" cy="46" r="4" fill="#1e293b" />
+                        <path d="M 46,56 Q 50,60 54,56" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.5px' }}>FRACTIONS BUDDY</div>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', lineHeight: 1.3, marginTop: '2px' }}>
+                        {isListening ? "Listening closely... Speak now!" : "Click the Mic icon and talk to me! You can also say 'submit'."}
+                      </p>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
                     <button 
                       className="btn btn-danger"
@@ -2424,6 +2594,16 @@ Write a simple explanation explaining the correct concept.
                           }}
                         />
                         <button 
+                          type="button"
+                          className={`btn ${isListening ? 'btn-danger' : 'btn-primary'}`}
+                          style={{ height: '90px', width: '50px', borderRadius: '14px', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', animation: isListening ? 'pulse 1.5s infinite' : 'none' }}
+                          onClick={toggleListening}
+                          disabled={isSubmitting || !activeQuestion}
+                          title={isListening ? "Stop listening" : "Start voice input"}
+                        >
+                          {isListening ? <MicOff style={{ width: 18, height: 18 }} /> : <Mic style={{ width: 18, height: 18 }} />}
+                        </button>
+                        <button 
                           className="btn btn-accent" 
                           style={{ height: '90px', width: '90px', borderRadius: '14px', flexDirection: 'column', gap: '0.25rem', justifyContent: 'center' }}
                           disabled={isSubmitting || !studentAnswer.trim() || !activeQuestion}
@@ -2484,6 +2664,16 @@ Write a simple explanation explaining the correct concept.
                             }
                           }}
                         />
+                        <button 
+                          type="button"
+                          className={`btn ${isListening ? 'btn-danger' : 'btn-primary'}`}
+                          style={{ height: '120px', width: '50px', borderRadius: '12px', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', animation: isListening ? 'pulse 1.5s infinite' : 'none' }}
+                          onClick={toggleListening}
+                          disabled={isSubmitting}
+                          title={isListening ? "Stop listening" : "Start voice input"}
+                        >
+                          {isListening ? <MicOff style={{ width: 18, height: 18 }} /> : <Mic style={{ width: 18, height: 18 }} />}
+                        </button>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'space-between', width: '90px' }}>
                           {/* File input button for homework photo */}
                           <label className="btn" style={{ padding: '0.5rem', height: '55px', cursor: 'pointer', borderRadius: '12px', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'center' }} title="Attach homework photo">
