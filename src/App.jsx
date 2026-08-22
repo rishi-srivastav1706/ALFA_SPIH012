@@ -385,6 +385,7 @@ export default function App() {
     }
   });
   const [authTab, setAuthTab] = useState("login"); // "login" or "signup"
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [teacherEmail, setTeacherEmail] = useState("");
   const [teacherPassword, setTeacherPassword] = useState("");
   const [teacherName, setTeacherName] = useState("");
@@ -734,6 +735,8 @@ export default function App() {
       setTeacherEmail("");
       setTeacherPassword("");
       setSchoolName("");
+      setIsAuthModalOpen(false);
+      setActiveView("teacher-dashboard");
     } catch (err) {
       addToast(`Registration failed: ${err.message}`, "error");
     }
@@ -756,6 +759,8 @@ export default function App() {
       addToast("Logged in successfully!", "success");
       setTeacherEmail("");
       setTeacherPassword("");
+      setIsAuthModalOpen(false);
+      setActiveView("teacher-dashboard");
     } catch (err) {
       addToast(`Login failed: ${err.message}`, "error");
     }
@@ -889,25 +894,7 @@ export default function App() {
     }
   };
 
-  // Sandbox slice toggle & Denominator change handlers
-  const handleSandboxDenomChange = (val) => {
-    setSandboxDenom(val);
-    const newShaded = {};
-    const half = Math.floor(val / 2);
-    for (let i = 0; i < val; i++) {
-      newShaded[i] = i < half;
-    }
-    setSandboxShadedSlices(newShaded);
-  };
 
-  const toggleSandboxSlice = (i) => {
-    const updated = { ...sandboxShadedSlices, [i]: !sandboxShadedSlices[i] };
-    setSandboxShadedSlices(updated);
-    
-    if (activeStudent) {
-      unlockBadge(activeStudent.id, "visual-artist");
-    }
-  };
 
   // TTS helper: Audio read aloud
   const handleSpeak = (text) => {
@@ -1837,8 +1824,12 @@ Write a simple explanation explaining the correct concept.
     await solveCustomQuestion(textToSend, imageAttached);
   };
 
-  // Nav actions
   const handleNavClick = (view) => {
+    if (view === "teacher-dashboard" && !currentTeacher) {
+      setAuthTab("login");
+      setIsAuthModalOpen(true);
+      return;
+    }
     setActiveView(view);
   };
 
@@ -1915,12 +1906,14 @@ Write a simple explanation explaining the correct concept.
             >
               <Compass style={{ width: 18, height: 18 }} /> Home
             </button>
-            <button 
-              className={`nav-tab ${activeView === "teacher-dashboard" ? "active" : ""}`}
-              onClick={() => handleNavClick("teacher-dashboard")}
-            >
-              <ChalkboardUserIcon /> Teacher Dashboard
-            </button>
+            {currentTeacher && (
+              <button 
+                className={`nav-tab ${activeView === "teacher-dashboard" ? "active" : ""}`}
+                onClick={() => handleNavClick("teacher-dashboard")}
+              >
+                <ChalkboardUserIcon /> Teacher Dashboard
+              </button>
+            )}
             {currentTeacher && (
               <button 
                 className={`nav-tab ${activeView === "settings" ? "active" : ""}`}
@@ -1935,12 +1928,25 @@ Write a simple explanation explaining the correct concept.
             >
               <UserGraduateIcon /> Student Portal
             </button>
-            <button 
-              className={`nav-tab ${activeView === "sandbox" ? "active" : ""}`}
-              onClick={() => handleNavClick("sandbox")}
-            >
-              <Sliders style={{ width: 18, height: 18 }} /> Sandbox
-            </button>
+            
+            {!currentTeacher && (
+              <>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => { setAuthTab("login"); setIsAuthModalOpen(true); }}
+                  style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem', height: 'auto', borderRadius: '12px', marginLeft: '0.5rem' }}
+                >
+                  Login
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => { setAuthTab("signup"); setIsAuthModalOpen(true); }}
+                  style={{ padding: '0.45rem 1.1rem', fontSize: '0.85rem', height: 'auto', borderRadius: '12px' }}
+                >
+                  Register
+                </button>
+              </>
+            )}
             
             {currentTeacher && (
               <div className="teacher-header-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99,102,241,0.08)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.15)', marginLeft: '1rem' }}>
@@ -2133,10 +2139,10 @@ Write a simple explanation explaining the correct concept.
                 </p>
               </div>
               <div className="glass-card feature-item">
-                <div className="feature-icon-wrapper" style={{ background: 'rgba(6, 182, 212, 0.08)', color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.15)' }}><Sliders style={{ width: 22, height: 22 }} /></div>
-                <h3>Interactive Visual Sandbox (Play-based Learning)</h3>
+                <div className="feature-icon-wrapper" style={{ background: 'rgba(6, 182, 212, 0.08)', color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.15)' }}><BookOpen style={{ width: 22, height: 22 }} /></div>
+                <h3>Grade-Adaptive Multi-Subject Tutoring</h3>
                 <p>
-                  Children learn best through tactile experience. Our interactive sandbox allows kids to manually slice and shade circle pizzas and rectangle chocolate bars, developing deep spatial understanding of equivalent parts.
+                  Tailored tutoring covering Mathematics, Science, Social Studies, Hindi, Telugu, Biology, and Physics for Grades 1 to 10. AI explanations and hints dynamically adapt to each grade's mindset and language constraints.
                 </p>
               </div>
               <div className="glass-card feature-item">
@@ -2281,115 +2287,8 @@ Write a simple explanation explaining the correct concept.
         )}
 
         {/* ================= VIEW: TEACHER DASHBOARD ================= */}
-        {activeView === "teacher-dashboard" && (
-          !currentTeacher ? (
-            <section className="view-section animate-fadeIn" style={{ maxWidth: '500px', margin: '2rem auto' }}>
-              <div className="glass-card auth-card">
-                <div className="auth-tabs" style={{ display: 'flex', borderBottom: '1px solid #cbd5e1', marginBottom: '1.5rem' }}>
-                  <button 
-                    type="button"
-                    className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`}
-                    onClick={() => setAuthTab('login')}
-                    style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'login' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'login' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
-                  >
-                    Teacher Login
-                  </button>
-                  <button 
-                    type="button"
-                    className={`auth-tab-btn ${authTab === 'signup' ? 'active' : ''}`}
-                    onClick={() => setAuthTab('signup')}
-                    style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'signup' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'signup' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
-                  >
-                    Register / Sign Up
-                  </button>
-                </div>
-
-                {authTab === 'login' ? (
-                  <form onSubmit={handleTeacherLogin} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Welcome Back</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Access your students roster, learning progress logs, and settings.</p>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email or Username</label>
-                      <input 
-                        type="text" 
-                        required
-                        className="form-control"
-                        value={teacherEmail}
-                        onChange={(e) => setTeacherEmail(e.target.value)}
-                        placeholder="teacher@school.com"
-                      />
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
-                      <input 
-                        type="password" 
-                        required
-                        className="form-control"
-                        value={teacherPassword}
-                        onChange={(e) => setTeacherPassword(e.target.value)}
-                        placeholder="••••••••"
-                      />
-                    </div>
-                    <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>
-                      <Unlock style={{ width: 16, height: 16 }} /> Unlock Dashboard
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleTeacherSignup} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Create Teacher Account</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Join EDUTOR to manage classes, customize fractions lessons, and track metrics.</p>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Full Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        className="form-control"
-                        value={teacherName}
-                        onChange={(e) => setTeacherName(e.target.value)}
-                        placeholder="e.g. Mrs. Priya Verma"
-                      />
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email Address</label>
-                      <input 
-                        type="email" 
-                        required
-                        className="form-control"
-                        value={teacherEmail}
-                        onChange={(e) => setTeacherEmail(e.target.value)}
-                        placeholder="teacher@school.com"
-                      />
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
-                      <input 
-                        type="password" 
-                        required
-                        className="form-control"
-                        value={teacherPassword}
-                        onChange={(e) => setTeacherPassword(e.target.value)}
-                        placeholder="Choose a password"
-                      />
-                    </div>
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>School / Organization Name</label>
-                      <input 
-                        type="text" 
-                        className="form-control"
-                        value={schoolName}
-                        onChange={(e) => setSchoolName(e.target.value)}
-                        placeholder="e.g. KV School No. 1"
-                      />
-                    </div>
-                    <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>
-                      <Lock style={{ width: 16, height: 16 }} /> Create Account
-                    </button>
-                  </form>
-                )}
-              </div>
-            </section>
-          ) : (
-            <section className="view-section">
+        {activeView === "teacher-dashboard" && currentTeacher && (
+          <section className="view-section animate-fadeIn">
             
             {/* Stats Row */}
             <div className="stats-grid">
@@ -2569,8 +2468,7 @@ Write a simple explanation explaining the correct concept.
               </div>
             </div>
           </section>
-        )
-      )}
+        )}
 
         {/* ================= VIEW: STUDENT PORTAL ================= */}
         {activeView === "student-portal" && (
@@ -3242,153 +3140,7 @@ Write a simple explanation explaining the correct concept.
           </section>
         )}
 
-        {/* ================= VIEW: SANDBOX ================= */}
-        {activeView === "sandbox" && (
-          <section className="view-section">
-            <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
-                <Sliders style={{ width: 24, height: 24, color: 'var(--primary)' }} />
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Fractions Visual Sandbox</h2>
-              </div>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                An interactive playground to explore fractions. Tap on sections of the shapes to shade them and watch the fraction update dynamically!
-              </p>
 
-              <div className="sandbox-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
-                {/* Control Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* Shape selection */}
-                  <div>
-                    <label style={{ fontWeight: 700, fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>Select Shape</label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
-                        type="button"
-                        className={`btn ${sandboxShape === "circle" ? "btn-primary" : ""}`}
-                        style={{ flex: 1 }}
-                        onClick={() => setSandboxShape("circle")}
-                      >
-                        🍕 Pizza (Circle)
-                      </button>
-                      <button 
-                        type="button"
-                        className={`btn ${sandboxShape === "rectangle" ? "btn-primary" : ""}`}
-                        style={{ flex: 1 }}
-                        onClick={() => setSandboxShape("rectangle")}
-                      >
-                        🍫 Chocolate (Rectangle)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Slices slider */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Slices (Denominator)</label>
-                      <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{sandboxDenom} Slices</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="1"
-                      max="12"
-                      className="form-control"
-                      style={{ padding: '0', cursor: 'pointer' }}
-                      value={sandboxDenom}
-                      onChange={(e) => handleSandboxDenomChange(parseInt(e.target.value))}
-                    />
-                  </div>
-
-                  {/* Fraction Math readouts */}
-                  {(() => {
-                    const numerator = Object.keys(sandboxShadedSlices).filter(k => sandboxShadedSlices[k]).length;
-                    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-                    const g = gcd(numerator, sandboxDenom);
-                    const simplifiedNumer = numerator / g;
-                    const simplifiedDenom = sandboxDenom / g;
-                    const hasEquiv = simplifiedDenom < sandboxDenom;
-                    
-                    return (
-                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>CURRENT FRACTION</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '2.5rem', fontWeight: 800 }}>
-                            <div>{numerator}</div>
-                            <div style={{ width: '40px', height: '3px', background: 'var(--color-text)', margin: '2px 0' }}></div>
-                            <div>{sandboxDenom}</div>
-                          </div>
-                          {hasEquiv && (
-                            <>
-                              <div style={{ fontSize: '1.8rem', color: 'var(--color-text-muted)' }}>=</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '2.5rem', fontWeight: 800, color: 'var(--success)' }}>
-                                <div>{simplifiedNumer}</div>
-                                <div style={{ width: '40px', height: '3px', background: 'var(--success)', margin: '2px 0' }}></div>
-                                <div>{simplifiedDenom}</div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.4 }}>
-                          <div>English: {numerator} out of {sandboxDenom} parts shaded {hasEquiv && `(or ${simplifiedNumer}/${simplifiedDenom})`}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                            Hindi: {sandboxDenom} में से {numerator} भाग रंगे हुए {hasEquiv && `(या ${simplifiedNumer}/${simplifiedDenom})`}
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                            Telugu: {sandboxDenom} భాగాలలో {numerator} భాగాలు రంగు వేయబడ్డాయి {hasEquiv && `(లేదా ${simplifiedNumer}/${simplifiedDenom})`}
-                          </div>
-                        </div>
-
-                        {activeStudent && (
-                          <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <CheckCircle2 style={{ width: 12, height: 12, fill: 'var(--success)', color: '#fff' }} /> Logging play for student {activeStudent.name}!
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Interactive SVG Display */}
-                <div style={{ display: 'flex', justifyContent: 'center', background: '#fff', border: '1px solid #cbd5e1', padding: '2rem', borderRadius: '20px', minHeight: '260px', alignItems: 'center', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02)' }}>
-                  {sandboxShape === "circle" ? (
-                    <svg viewBox="0 0 200 200" width="220" height="220">
-                      {/* Outline circle */}
-                      <circle cx="100" cy="100" r="82" fill="none" stroke="var(--primary)" strokeWidth="3" />
-                      {/* Slice shapes */}
-                      {Array.from({ length: sandboxDenom }).map((_, i) => (
-                        <path 
-                          key={i} 
-                          d={getCircleSlicePath(i, sandboxDenom)} 
-                          fill={sandboxShadedSlices[i] ? "var(--primary-light)" : "#f1f5f9"} 
-                          stroke="#ffffff" 
-                          strokeWidth="2" 
-                          onClick={() => toggleSandboxSlice(i)} 
-                          style={{ cursor: 'pointer', transition: 'fill 0.2s', outline: 'none' }} 
-                        />
-                      ))}
-                    </svg>
-                  ) : (
-                    <svg viewBox="0 0 320 140" width="300" height="140">
-                      {Array.from({ length: sandboxDenom }).map((_, i) => (
-                        <rect 
-                          key={i}
-                          x={i * (300 / sandboxDenom) + 10}
-                          y={10}
-                          width={300 / sandboxDenom}
-                          height={120}
-                          fill={sandboxShadedSlices[i] ? "var(--primary-light)" : "#f1f5f9"}
-                          stroke="#ffffff"
-                          strokeWidth="2"
-                          onClick={() => toggleSandboxSlice(i)}
-                          style={{ cursor: 'pointer', transition: 'fill 0.2s' }}
-                        />
-                      ))}
-                    </svg>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
       </main>
 
@@ -3576,6 +3328,124 @@ Write a simple explanation explaining the correct concept.
                 <button type="submit" className="btn btn-primary">Start Learning!</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Teacher Login & Registration */}
+      {isAuthModalOpen && (
+        <div className="modal-backdrop">
+          <div className="glass-card modal" style={{ maxWidth: '500px', margin: '2rem auto' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">{authTab === 'login' ? 'Teacher Login' : 'Register / Sign Up'}</h3>
+              <button className="modal-close" onClick={() => setIsAuthModalOpen(false)}>&times;</button>
+            </div>
+            
+            <div className="auth-tabs" style={{ display: 'flex', borderBottom: '1px solid #cbd5e1', marginBottom: '1.5rem' }}>
+              <button 
+                type="button"
+                className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`}
+                onClick={() => setAuthTab('login')}
+                style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'login' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'login' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
+              >
+                Login
+              </button>
+              <button 
+                type="button"
+                className={`auth-tab-btn ${authTab === 'signup' ? 'active' : ''}`}
+                onClick={() => setAuthTab('signup')}
+                style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'signup' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'signup' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
+              >
+                Register
+              </button>
+            </div>
+
+            {authTab === 'login' ? (
+              <form onSubmit={handleTeacherLogin} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Welcome Back</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Access your students roster, learning progress logs, and settings.</p>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email or Username</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="form-control"
+                    value={teacherEmail}
+                    onChange={(e) => setTeacherEmail(e.target.value)}
+                    placeholder="teacher@school.com"
+                  />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    className="form-control"
+                    value={teacherPassword}
+                    onChange={(e) => setTeacherPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="modal-footer" style={{ marginTop: '1rem', padding: 0, border: 'none' }}>
+                  <button type="button" className="btn" onClick={() => setIsAuthModalOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Log In</button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleTeacherSignup} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Create Teacher Account</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Sign up to manage class statistics and student learning tracks.</p>
+                
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Your Full Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="form-control"
+                    value={teacherName}
+                    onChange={(e) => setTeacherName(e.target.value)}
+                    placeholder="e.g. Mrs. Jane Smith"
+                  />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>School or Institution Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    className="form-control"
+                    value={schoolName}
+                    onChange={(e) => setSchoolName(e.target.value)}
+                    placeholder="e.g. Oakridge Public School"
+                  />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    className="form-control"
+                    value={teacherEmail}
+                    onChange={(e) => setTeacherEmail(e.target.value)}
+                    placeholder="teacher@school.com"
+                  />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Create Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    className="form-control"
+                    value={teacherPassword}
+                    onChange={(e) => setTeacherPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                  />
+                </div>
+                <div className="modal-footer" style={{ marginTop: '1rem', padding: 0, border: 'none' }}>
+                  <button type="button" className="btn" onClick={() => setIsAuthModalOpen(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Register Account</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
