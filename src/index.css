@@ -1473,11 +1473,11 @@ svg path:hover, svg rect:hover {
 body.dark-theme {
   --bg-main: #0b0f19;
   --bg-dark: #0f172a;
-  --bg-card: rgba(15, 23, 42, 0.9);
+  --bg-card: rgba(15, 23, 42, 0.85);
   --border-card: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(99, 102, 241, 0.4);
+  --border-glow: rgba(99, 102, 241, 0.45);
   
-  --color-text: #f8fafc;
+  --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
   
   --primary: #6366f1;
@@ -1487,10 +1487,10 @@ body.dark-theme {
 body.dark-theme {
   background-color: var(--bg-main);
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.18) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.14) 0%, transparent 40%),
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
 }
 
 body.dark-theme header {
@@ -1500,26 +1500,51 @@ body.dark-theme header {
 
 body.dark-theme .nav-tab:hover {
   background: rgba(255, 255, 255, 0.04);
+  color: #fff;
 }
 
 body.dark-theme input, body.dark-theme select, body.dark-theme textarea {
   background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+body.dark-theme select option {
+  background: #0f172a;
+  color: #f8fafc;
 }
 
 body.dark-theme input:focus, body.dark-theme select:focus, body.dark-theme textarea:focus {
   border-color: var(--primary-light);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  background: #1e293b;
 }
 
 body.dark-theme .modal {
   background: #0f172a;
   border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .modal-close {
+  color: #94a3b8;
+}
+
+body.dark-theme .modal-close:hover {
+  color: #fff;
+}
+
+body.dark-theme .auth-tabs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.dark-theme .badge-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 body.dark-theme .badge-card.locked {
-  background: rgba(30, 41, 59, 0.5) !important;
+  background: rgba(30, 41, 59, 0.2) !important;
   border: 1px dashed rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -1542,34 +1567,51 @@ body.dark-theme .chat-header {
 body.dark-theme table th {
   background: #1e293b;
   color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.dark-theme table td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+body.dark-theme table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
 body.dark-theme .message.student .msg-bubble {
   background: #1e293b;
-  color: #fff;
+  color: #f8fafc;
 }
 
 body.dark-theme .message.tutor .msg-bubble {
-  background: rgba(99, 102, 241, 0.15);
-  color: #fff;
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.12);
+  color: #e0e7ff;
+  border: 1px solid rgba(99, 102, 241, 0.22);
 }
 
 body.dark-theme .badge-unlock-popup {
   background: rgba(15, 23, 42, 0.95) !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
 }
 
 body.dark-theme .avatar {
-  background: rgba(99, 102, 241, 0.2) !important;
+  background: rgba(99, 102, 241, 0.18) !important;
   color: #818cf8 !important;
+  border: 1px solid rgba(99, 102, 241, 0.15);
 }
 
 body.dark-theme .logo {
   background: linear-gradient(120deg, #60a5fa, #818cf8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+body.dark-theme .glass-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.12);
+}
+
+body.dark-theme .chat-input-bar {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }

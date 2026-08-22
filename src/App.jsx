@@ -536,7 +536,7 @@ export default function App() {
   const VALUES = [
     "every single child.",
     "understanding, not memorization.",
-    "English, Hindi & Telugu learners.",
+    "all subjects.",
     "psychological safety & encouragement.",
     "learning at their own pace."
   ];
