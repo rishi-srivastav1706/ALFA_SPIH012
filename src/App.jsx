@@ -1447,11 +1447,11 @@ The student has asked you this custom fractions question: "${text}".`;
 
             {/* Core Values grid */}
             <div className="section-title">
-              <h2>Pedagogical Architecture of EDUTOR</h2>
+              <h2>EDUTOR Core Services & Pedagogy</h2>
               <p>Built on the intersection of child developmental psychology, active semantic grading, and cognitive load theory.</p>
             </div>
 
-            <div className="features-grid">
+            <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
               <div className="glass-card feature-item">
                 <div className="feature-icon-wrapper"><TrendingUp style={{ width: 22, height: 22 }} /></div>
                 <h3>Zone of Proximal Development (ZPD) Adaptability</h3>
@@ -1471,6 +1471,20 @@ The student has asked you this custom fractions question: "${text}".`;
                 <h3>Low-Cognitive-Load Safety Scaffolding</h3>
                 <p>
                   Mistakes are not marked as failures but are treated as diagnostic data points. Wrong answers trigger pre-translated, visual pizza and chocolate segment analogies in their preferred tongue (Hindi, Telugu, English), decreasing frustration and ensuring full error tolerance.
+                </p>
+              </div>
+              <div className="glass-card feature-item">
+                <div className="feature-icon-wrapper" style={{ background: 'rgba(6, 182, 212, 0.08)', color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.15)' }}><Sliders style={{ width: 22, height: 22 }} /></div>
+                <h3>Interactive Visual Sandbox (Play-based Learning)</h3>
+                <p>
+                  Children learn best through tactile experience. Our interactive sandbox allows kids to manually slice and shade circle pizzas and rectangle chocolate bars, developing deep spatial understanding of equivalent parts.
+                </p>
+              </div>
+              <div className="glass-card feature-item">
+                <div className="feature-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.15)' }}><Gauge style={{ width: 22, height: 22 }} /></div>
+                <h3>Teacher Analytics & Progress Tracking</h3>
+                <p>
+                  EDUTOR isn't just for students. It provides teachers and parents with a robust diagnostic dashboard, displaying class-wide mastery statistics, individual progress charts, and historical attempt logs.
                 </p>
               </div>
             </div>
