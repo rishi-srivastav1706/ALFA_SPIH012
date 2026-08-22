@@ -1098,11 +1098,19 @@ export default function App() {
 
       if (apiResponse.ok) {
         const result = await apiResponse.json();
-        setActiveQuestion({
+        const qObj = {
           question_text: result.question_text || `Explain a concept in ${sub}.`,
           hint: result.hint || `Think about ${sub}!`,
           difficulty: difficultyLevel
-        });
+        };
+        setActiveQuestion(qObj);
+        setChatMessages(prev => [...prev, {
+          id: Date.now() + "-q",
+          sender: "tutor",
+          type: "question",
+          content: qObj.question_text,
+          hint: qObj.hint
+        }]);
       } else {
         throw new Error("Generation API call failed");
       }
@@ -1122,10 +1130,18 @@ export default function App() {
       const index = (difficultyLevel - 1) % list.length;
       const selected = list[index] || list[0];
 
-      setActiveQuestion({
+      const qObj = {
         ...selected,
         difficulty: difficultyLevel
-      });
+      };
+      setActiveQuestion(qObj);
+      setChatMessages(prev => [...prev, {
+        id: Date.now() + "-q",
+        sender: "tutor",
+        type: "question",
+        content: qObj.question_text,
+        hint: qObj.hint
+      }]);
     }
 
     setIsTyping(false);
@@ -2382,55 +2398,12 @@ Write a simple explanation explaining the correct concept.
                   {/* Message Feed */}
                   <div className="chat-messages">
                     {chatMessages.map((msg, index) => (
-                      <div key={index}>
-                        {msg.type === "text" ? (
-                          <div className={`message ${msg.sender}`}>
-                            <div className="msg-avatar">
-                              {msg.sender === "tutor" ? <GraduationCap style={{ width: 16, height: 16 }} /> : <Users style={{ width: 16, height: 16 }} />}
-                            </div>
-                            <div className="msg-bubble">{msg.content}</div>
-                          </div>
-                        ) : (
-                          // Evaluation Card
-                          <div className="evaluation-card">
-                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary-light)', marginBottom: '0.5rem', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <Sparkles style={{ width: 12, height: 12 }} /> EDUTOR'S EVALUATION
-                            </div>
-                            <div className="eval-stats">
-                              <div className={`eval-stat score ${msg.content.score < 60 ? 'low' : ''}`}>
-                                <Star style={{ width: 14, height: 14, fill: msg.content.score >= 60 ? '#f59e0b' : 'none' }} />
-                                <span>Score: {msg.content.score}/100</span>
-                              </div>
-                              <div className={`eval-stat status ${!msg.content.understood ? 'low' : ''}`}>
-                                {msg.content.understood ? (
-                                  <CheckCircle2 style={{ width: 14, height: 14 }} />
-                                ) : (
-                                  <XCircle style={{ width: 14, height: 14 }} />
-                                )}
-                                <span>{msg.content.understood ? "Understood!" : "Needs Review"}</span>
-                              </div>
-                            </div>
-                            <div className="eval-reason">{msg.content.reason}</div>
-                            
-                            {/* Level Up/Down banner */}
-                            {msg.content.newDiff > msg.content.oldDiff && (
-                              <div style={{ marginTop: '0.75rem', color: '#10b981', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <ArrowUpCircle style={{ width: 14, height: 14 }} /> Excellent! Level increased to Difficulty Level {msg.content.newDiff}!
-                              </div>
-                            )}
-                            {msg.content.newDiff < msg.content.oldDiff && (
-                              <div style={{ marginTop: '0.75rem', color: '#ef4444', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <ArrowDownCircle style={{ width: 14, height: 14 }} /> Level adjusted to Difficulty Level {msg.content.newDiff} for conceptual review.
-                              </div>
-                            )}
-                            {msg.content.newDiff === msg.content.oldDiff && (
-                              <div style={{ marginTop: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <ArrowRightCircle style={{ width: 14, height: 14 }} /> Keeping Level {msg.content.newDiff} to solidify knowledge.
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                      <ChatMessage 
+                        key={msg.id || index} 
+                        msg={msg} 
+                        activeStudent={activeStudent} 
+                        handleSpeak={handleSpeak} 
+                      />
                     ))}
                     
                     {isTyping && (
@@ -2477,46 +2450,6 @@ Write a simple explanation explaining the correct concept.
 
                   {activeChatMode === "challenge" && (
                     <div className="chat-input-area">
-                      <div className="question-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.5rem' }}>
-                          <h5>Active fractions challenge</h5>
-                          <button 
-                            className="btn" 
-                            style={{ padding: '0.35rem 0.6rem', height: 'auto', background: isSpeaking ? 'rgba(79,172,254,0.15)' : 'rgba(255,255,255,0.03)' }}
-                            onClick={() => handleSpeak(activeQuestion?.question_text)}
-                            disabled={!activeQuestion}
-                            title="Read question aloud"
-                          >
-                            {isSpeaking ? <VolumeX style={{ width: 14, height: 14, color: '#4facfe' }} /> : <Volume2 style={{ width: 14, height: 14 }} />}
-                          </button>
-                        </div>
-
-                        {activeQuestion ? (
-                          <p className="question-text">{activeQuestion.question_text}</p>
-                        ) : (
-                          <div style={{ padding: '0.5rem 0' }}>
-                            <span className="skeleton skeleton-text"></span>
-                            <span className="skeleton skeleton-text short"></span>
-                          </div>
-                        )}
-                        
-                        <button 
-                          className="btn" 
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                          onClick={() => setHintVisible(!hintVisible)}
-                          disabled={!activeQuestion}
-                        >
-                          <Lightbulb style={{ width: 14, height: 14 }} /> {hintVisible ? "Hide Hint" : "Reveal Hint"}
-                        </button>
-
-                        {hintVisible && activeQuestion && (
-                          <div className="hint-box">
-                            <Info style={{ width: 14, height: 14, flexShrink: 0 }} />
-                            <span>{activeQuestion.hint}</span>
-                          </div>
-                        )}
-                      </div>
-
                       <div className="chat-input-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
                         <textarea 
                           value={studentAnswer}
@@ -3030,6 +2963,93 @@ Write a simple explanation explaining the correct concept.
 
     </div>
   );
+}
+
+// ChatMessage Sub-component to manage interactive elements (TTS, hints, styling) cleanly
+function ChatMessage({ msg, activeStudent, handleSpeak }) {
+  const [showHint, setShowHint] = useState(false);
+
+  if (msg.type === "text") {
+    return (
+      <div className={`message ${msg.sender}`}>
+        <div className="msg-avatar">
+          {msg.sender === "tutor" ? <GraduationCap style={{ width: 16, height: 16 }} /> : <Users style={{ width: 16, height: 16 }} />}
+        </div>
+        <div className="msg-bubble">{msg.content}</div>
+      </div>
+    );
+  }
+
+  if (msg.type === "question") {
+    return (
+      <div className="message tutor">
+        <div className="msg-avatar">
+          <GraduationCap style={{ width: 16, height: 16 }} />
+        </div>
+        <div className="msg-bubble question-bubble" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: '280px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary-light)' }}>
+              🎯 Current Challenge
+            </span>
+            <button 
+              className="btn" 
+              style={{ padding: '4px', height: '26px', width: '26px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: '6px', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={() => handleSpeak(msg.content)}
+              title="Read aloud"
+            >
+              <Volume2 style={{ width: 12, height: 12 }} />
+            </button>
+          </div>
+          
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '0.98rem', lineHeight: 1.4, color: 'var(--color-text)' }}>{msg.content}</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+            {msg.hint && (
+              <button 
+                type="button"
+                className="btn" 
+                style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', width: 'fit-content', background: 'rgba(245,158,11,0.08)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.15)' }}
+                onClick={() => setShowHint(prev => !prev)}
+              >
+                <Lightbulb style={{ width: 12, height: 12 }} /> {showHint ? "Hide Hint" : "Need a Hint?"}
+              </button>
+            )}
+            
+            {showHint && msg.hint && (
+              <div className="hint-box" style={{ margin: 0, padding: '0.5rem 0.75rem', borderRadius: '10px', fontSize: '0.78rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <Info style={{ width: 12, height: 12, flexShrink: 0 }} />
+                <span>{msg.hint}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (msg.type === "eval") {
+    const isCorrect = msg.content.score >= 80;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '0.75rem 0' }}>
+        <div style={{
+          background: isCorrect ? 'rgba(16, 185, 129, 0.06)' : 'rgba(245, 158, 11, 0.06)',
+          color: isCorrect ? '#10b981' : '#f59e0b',
+          border: `1px solid ${isCorrect ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)'}`,
+          padding: '0.5rem 1rem',
+          borderRadius: '12px',
+          fontSize: '0.8rem',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          {isCorrect ? '🎉 Correct Answer!' : '⚠️ Concept Review'} • Score: {msg.content.score}/100 • Difficulty: {msg.content.newDiff}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 // Icon helpers

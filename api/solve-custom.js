@@ -46,7 +46,7 @@ Keep the answer friendly and under 5 steps.
 ${promptMessage}
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>`;
 
-    const apiResponse = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
+    const apiResponse = await fetch("https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
