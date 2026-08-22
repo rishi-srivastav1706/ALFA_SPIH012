@@ -48,6 +48,7 @@ import {
   Legend, 
   ArcElement 
 } from 'chart.js';
+import { supabase } from './supabase';
 
 // Register ChartJS modules
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -334,26 +335,60 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [currentText, isDeleting, valueIndex, activeView]);
 
-  // Initialize DB from localStorage or seed defaults
+  // Initialize DB from Supabase tables
   useEffect(() => {
-    const localStuds = localStorage.getItem("tut_students");
-    const localProg = localStorage.getItem("tut_progress");
-    const localAtts = localStorage.getItem("tut_attempts");
-    const localToken = localStorage.getItem("tut_hf_token");
+    const initDatabase = async () => {
+      try {
+        const { data: studs, error: err1 } = await supabase
+          .from('students')
+          .select('*')
+          .order('name', { ascending: true });
+        if (err1) throw err1;
+        setStudents(studs || []);
 
-    if (localStuds && localProg && localAtts) {
-      setStudents(JSON.parse(localStuds));
-      setProgress(JSON.parse(localProg));
-      setAttempts(JSON.parse(localAtts));
-    } else {
-      localStorage.setItem("tut_students", JSON.stringify(INITIAL_STUDENTS));
-      localStorage.setItem("tut_progress", JSON.stringify(INITIAL_PROGRESS));
-      localStorage.setItem("tut_attempts", JSON.stringify(INITIAL_ATTEMPTS));
-      setStudents(INITIAL_STUDENTS);
-      setProgress(INITIAL_PROGRESS);
-      setAttempts(INITIAL_ATTEMPTS);
-    }
+        if (studs && studs.length > 0) {
+          const { data: prog, error: err2 } = await supabase
+            .from('progress')
+            .select('*');
+          if (err2) throw err2;
+          setProgress(prog || []);
 
+          const { data: atts, error: err3 } = await supabase
+            .from('attempts')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (err3) throw err3;
+          setAttempts(atts || []);
+        }
+      } catch (err) {
+        console.error("Error loading Supabase tables:", err.message);
+      }
+    };
+
+    initDatabase();
+
+    // Listen to Supabase Auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        // Fetch teacher profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        setCurrentTeacher({
+          id: session.user.id,
+          email: session.user.email,
+          name: profile?.name || session.user.email,
+          school: profile?.school || ""
+        });
+      } else {
+        setCurrentTeacher(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Sync scroll chat feed
@@ -386,7 +421,14 @@ export default function App() {
     );
 
     setStudents(updatedStudents);
-    localStorage.setItem("tut_students", JSON.stringify(updatedStudents));
+
+    // Save to Supabase (Asynchronously)
+    supabase.from('students')
+      .update({ unlocked_badges: updatedBadges })
+      .eq('id', studentId)
+      .then(({ error }) => {
+        if (error) console.error("Error syncing achievement to Supabase:", error.message);
+      });
 
     if (activeStudent && activeStudent.id === studentId) {
       setActiveStudent(prev => ({ ...prev, unlocked_badges: updatedBadges }));
@@ -401,72 +443,78 @@ export default function App() {
   };
 
   // Teacher Authentication handlers
-  const handleTeacherSignup = (e) => {
+  const handleTeacherSignup = async (e) => {
     e.preventDefault();
     if (!teacherName.trim() || !teacherEmail.trim() || !teacherPassword.trim()) {
       addToast("Please fill in all required fields.", "error");
       return;
     }
 
-    const storedTeachers = JSON.parse(localStorage.getItem("tut_teachers") || "[]");
-    if (storedTeachers.some(t => t.email.toLowerCase() === teacherEmail.toLowerCase())) {
-      addToast("An account with this email already exists.", "error");
-      return;
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: teacherEmail.trim(),
+        password: teacherPassword.trim()
+      });
+      if (authError) throw authError;
+
+      const user = authData.user;
+      if (!user) throw new Error("Teacher registration failed.");
+
+      // Insert profile details
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          name: teacherName.trim(),
+          school: schoolName.trim()
+        });
+      if (profileError) throw profileError;
+
+      addToast(`Welcome, Teacher ${teacherName.trim()}! Registered successfully.`, "success");
+      
+      setTeacherName("");
+      setTeacherEmail("");
+      setTeacherPassword("");
+      setSchoolName("");
+    } catch (err) {
+      addToast(`Registration failed: ${err.message}`, "error");
     }
-
-    const newTeacher = {
-      id: "t-" + Date.now(),
-      name: teacherName.trim(),
-      email: teacherEmail.trim(),
-      password: teacherPassword.trim(),
-      school: schoolName.trim(),
-      created_at: new Date().toISOString()
-    };
-
-    storedTeachers.push(newTeacher);
-    localStorage.setItem("tut_teachers", JSON.stringify(storedTeachers));
-    
-    setCurrentTeacher(newTeacher);
-    localStorage.setItem("tut_active_teacher", JSON.stringify(newTeacher));
-    addToast(`Welcome, Teacher ${newTeacher.name}!`, "success");
-    
-    setTeacherName("");
-    setTeacherEmail("");
-    setTeacherPassword("");
-    setSchoolName("");
   };
 
-  const handleTeacherLogin = (e) => {
+  const handleTeacherLogin = async (e) => {
     e.preventDefault();
     if (!teacherEmail.trim() || !teacherPassword.trim()) {
       addToast("Please enter email and password.", "error");
       return;
     }
 
-    const storedTeachers = JSON.parse(localStorage.getItem("tut_teachers") || "[]");
-    const teacher = storedTeachers.find(t => 
-      t.email.toLowerCase() === teacherEmail.toLowerCase() && 
-      t.password === teacherPassword
-    );
-
-    if (!teacher) {
-      addToast("Invalid email or password.", "error");
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: teacherEmail.trim(),
+        password: teacherPassword.trim()
+      });
+      if (error) throw error;
+      
+      addToast("Logged in successfully!", "success");
+      setTeacherEmail("");
+      setTeacherPassword("");
+    } catch (err) {
+      addToast(`Login failed: ${err.message}`, "error");
     }
-
-    setCurrentTeacher(teacher);
-    localStorage.setItem("tut_active_teacher", JSON.stringify(teacher));
-    addToast(`Welcome back, ${teacher.name}!`, "success");
-    
-    setTeacherEmail("");
-    setTeacherPassword("");
   };
 
-  const handleTeacherLogout = () => {
-    setCurrentTeacher(null);
-    localStorage.removeItem("tut_active_teacher");
-    addToast("Logged out successfully.", "info");
-    setActiveView("landing-page");
+  const handleTeacherLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setCurrentTeacher(null);
+      setStudents([]);
+      setProgress([]);
+      addToast("Logged out successfully.", "info");
+      setActiveView("landing-page");
+    } catch (err) {
+      addToast(`Logout failed: ${err.message}`, "error");
+    }
   };
 
   // Student PIN & Verification handlers
@@ -497,45 +545,54 @@ export default function App() {
   };
 
   // Student self-signup
-  const handleCreateStudentSelf = (e) => {
+  const handleCreateStudentSelf = async (e) => {
     e.preventDefault();
     if (!selfName.trim()) return;
 
-    const newId = "s-" + Date.now();
-    const newStudent = {
-      id: newId,
+    const teacherId = currentTeacher?.id || "00000000-0000-0000-0000-000000000000";
+
+    const studentRecord = {
       name: selfName.trim(),
       language: selfLanguage,
       difficulty: 1,
-      pin: selfPin.trim(),
+      pin: selfPin.trim() || null,
       unlocked_badges: ["first-steps"],
-      created_at: new Date().toISOString()
+      teacher_id: teacherId
     };
 
-    const newProg = {
-      student_id: newId,
-      subject: "Mathematics",
-      topic: "Fractions",
-      mastery_score: 0.0,
-      total_attempts: 0,
-      correct_attempts: 0
-    };
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .insert(studentRecord)
+        .select()
+        .single();
+      if (error) throw error;
 
-    const updatedStuds = [...students, newStudent];
-    const updatedProg = [...progress, newProg];
+      const newStudent = data;
 
-    setStudents(updatedStuds);
-    setProgress(updatedProg);
+      const { error: progError } = await supabase
+        .from('progress')
+        .insert({
+          student_id: newStudent.id,
+          subject: "Mathematics",
+          topic: "Fractions",
+          mastery_score: 0.0,
+          total_attempts: 0,
+          correct_attempts: 0
+        });
+      if (progError) throw progError;
 
-    localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-    localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+      setStudents(prev => [...prev, newStudent]);
+      
+      addToast(`Added student ${selfName.trim()} successfully!`, "success");
+      setSelfName("");
+      setSelfPin("");
+      setIsAddingStudentSelf(false);
 
-    addToast(`Added student ${selfName.trim()} successfully!`, "success");
-    setSelfName("");
-    setSelfPin("");
-    setIsAddingStudentSelf(false);
-
-    loadStudentSession(newId);
+      loadStudentSession(newStudent.id);
+    } catch (err) {
+      addToast(`Error adding student profile: ${err.message}`, "error");
+    }
   };
 
   // Sandbox slice toggle & Denominator change handlers
@@ -597,89 +654,109 @@ export default function App() {
     }
   }, [activeView, activeStudent]);
 
-  const handleCreateStudent = (e) => {
+  const handleCreateStudent = async (e) => {
     e.preventDefault();
-    if (!addName.trim()) return;
+    if (!addName.trim() || !currentTeacher) return;
 
-    const newId = "s-" + Date.now();
-    const newStudent = {
-      id: newId,
+    const studentRecord = {
       name: addName.trim(),
       language: addLanguage,
       difficulty: 1,
-      pin: addPin.trim(),
-      unlocked_badges: [],
-      created_at: new Date().toISOString()
+      pin: addPin.trim() || null,
+      unlocked_badges: ["first-steps"],
+      teacher_id: currentTeacher.id
     };
 
-    const newProg = {
-      student_id: newId,
-      subject: "Mathematics",
-      topic: "Fractions",
-      mastery_score: 0.0,
-      total_attempts: 0,
-      correct_attempts: 0
-    };
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .insert(studentRecord)
+        .select()
+        .single();
+      if (error) throw error;
 
-    const updatedStuds = [...students, newStudent];
-    const updatedProg = [...progress, newProg];
+      const newStudent = data;
 
-    setStudents(updatedStuds);
-    setProgress(updatedProg);
+      const { error: progError } = await supabase
+        .from('progress')
+        .insert({
+          student_id: newStudent.id,
+          subject: "Mathematics",
+          topic: "Fractions",
+          mastery_score: 0.0,
+          total_attempts: 0,
+          correct_attempts: 0
+        });
+      if (progError) throw progError;
 
-    localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-    localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+      setStudents(prev => [...prev, newStudent]);
 
-    // Unlock achievement for registering profile!
-    unlockBadge(newId, "first-steps");
-
-    addToast(`Added student ${addName.trim()} to class registry!`, "success");
-    setAddName("");
-    setAddPin("");
-    setIsAddingStudent(false);
+      addToast(`Added student ${addName.trim()} to class registry!`, "success");
+      setAddName("");
+      setAddPin("");
+      setIsAddingStudent(false);
+    } catch (err) {
+      addToast(`Error adding student: ${err.message}`, "error");
+    }
   };
 
   // Delete Student
-  const handleDeleteStudent = (id, name) => {
+  const handleDeleteStudent = async (id, name) => {
     if (!confirm(`Are you sure you want to remove ${name} from class? This deletes their learning progress.`)) return;
 
-    const updatedStuds = students.filter(s => s.id !== id);
-    const updatedProg = progress.filter(p => p.student_id !== id);
-    const updatedAttempts = attempts.filter(a => a.student_id !== id);
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
 
-    setStudents(updatedStuds);
-    setProgress(updatedProg);
-    setAttempts(updatedAttempts);
+      setStudents(prev => prev.filter(s => s.id !== id));
+      setProgress(prev => prev.filter(p => p.student_id !== id));
+      setAttempts(prev => prev.filter(a => a.student_id !== id));
 
-    localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-    localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
-    localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
-
-    addToast(`Removed ${name} from roster.`, "info");
-    if (activeStudent && activeStudent.id === id) {
-      exitStudentSession();
+      addToast(`Removed ${name} from roster.`, "info");
+      if (activeStudent && activeStudent.id === id) {
+        exitStudentSession();
+      }
+    } catch (err) {
+      addToast(`Error deleting student: ${err.message}`, "error");
     }
   };
 
   // Reset student progress
-  const handleResetProgress = (id, name) => {
+  const handleResetProgress = async (id, name) => {
     if (!confirm(`Are you sure you want to reset all progress for ${name}?`)) return;
 
-    const updatedStuds = students.map(s => s.id === id ? { ...s, difficulty: 1 } : s);
-    const updatedProg = progress.map(p => p.student_id === id ? { ...p, mastery_score: 0, total_attempts: 0, correct_attempts: 0 } : p);
-    const updatedAttempts = attempts.filter(a => a.student_id !== id);
+    try {
+      const { error: err1 } = await supabase
+        .from('students')
+        .update({ difficulty: 1 })
+        .eq('id', id);
+      if (err1) throw err1;
 
-    setStudents(updatedStuds);
-    setProgress(updatedProg);
-    setAttempts(updatedAttempts);
+      const { error: err2 } = await supabase
+        .from('progress')
+        .update({ mastery_score: 0.0, total_attempts: 0, correct_attempts: 0 })
+        .eq('student_id', id);
+      if (err2) throw err2;
 
-    localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-    localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
-    localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
+      const { error: err3 } = await supabase
+        .from('attempts')
+        .delete()
+        .eq('student_id', id);
+      if (err3) throw err3;
 
-    addToast(`Tutoring history reset for ${name}.`, "info");
-    if (activeStudent && activeStudent.id === id) {
-      loadStudentSession(id);
+      setStudents(prev => prev.map(s => s.id === id ? { ...s, difficulty: 1 } : s));
+      setProgress(prev => prev.map(p => p.student_id === id ? { ...p, mastery_score: 0, total_attempts: 0, correct_attempts: 0 } : p));
+      setAttempts(prev => prev.filter(a => a.student_id !== id));
+
+      addToast(`Tutoring history reset for ${name}.`, "info");
+      if (activeStudent && activeStudent.id === id) {
+        loadStudentSession(id);
+      }
+    } catch (err) {
+      addToast(`Error resetting progress: ${err.message}`, "error");
     }
   };
 
@@ -689,7 +766,7 @@ export default function App() {
     loadStudentSession(student.id);
   };
 
-  const loadStudentSession = (studentId) => {
+  const loadStudentSession = async (studentId) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
@@ -703,14 +780,61 @@ export default function App() {
       welcome = `నమస్తే ${student.name}! నేను ఎడ్యుటర్, నీ మ్యాథ్స్ ఫ్రెండ్ ని. 🌟 కలిసి భిన్నాలు నేర్చుకుందాం. నీ కోసం ఒక లెక్క కింద ఉంది!`;
     }
 
-    setChatMessages([
-      {
-        id: 1,
-        sender: "tutor",
-        type: "text",
-        content: welcome
+    const welcomeMsg = {
+      id: Date.now(),
+      sender: "tutor",
+      type: "text",
+      content: welcome
+    };
+
+    setChatMessages([welcomeMsg]);
+
+    // Fetch and sync attempts for this student
+    try {
+      const { data: dbAtts, error } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+
+      if (dbAtts && dbAtts.length > 0) {
+        // Map historical attempts to chat messages
+        const history = [];
+        dbAtts.forEach(att => {
+          // Student response
+          history.push({
+            id: att.id + "-stud",
+            sender: "student",
+            type: "text",
+            content: att.student_answer
+          });
+          // Evaluation card
+          history.push({
+            id: att.id + "-eval",
+            sender: "system",
+            type: "eval",
+            content: {
+              score: att.understanding_score,
+              understood: att.concept_understood,
+              reason: att.understanding_score >= 80 ? "Concept understood!" : "Review needed.",
+              oldDiff: att.difficulty_level,
+              newDiff: att.difficulty_level
+            }
+          });
+          // Tutor reply
+          history.push({
+            id: att.id + "-tutor",
+            sender: "tutor",
+            type: "text",
+            content: att.tutor_explanation
+          });
+        });
+        setChatMessages([welcomeMsg, ...history]);
       }
-    ]);
+    } catch (err) {
+      console.error("Error loading student session attempts:", err);
+    }
 
     fetchNextQuestion(student.difficulty, student.language);
   };
@@ -918,29 +1042,56 @@ Write a simple explanation explaining the correct concept.
 
     setIsTyping(true);
 
-    // Call grading engine (tries HF, fallbacks to local)
+    // Call grading engine via secure serverless proxy
     let score = 0;
     let understood = false;
     let reason = "";
     let explanation = "";
-    let isAi = false;
 
-    if (getHFToken()) {
-      const aiGraded = await callHuggingFaceAPI(activeQuestion.question_text, answer);
-      if (aiGraded) {
-        score = aiGraded.understanding_score;
-        understood = aiGraded.concept_understood;
-        reason = aiGraded.reason;
-        isAi = true;
+    try {
+      const hfToken = localStorage.getItem("tut_hf_token") || "";
+      const apiResponse = await fetch("/api/grade", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-hf-token": hfToken
+        },
+        body: JSON.stringify({
+          questionText: activeQuestion.question_text,
+          studentAnswer: answer
+        })
+      });
 
-        const aiExposed = await callHuggingFaceTutor(activeQuestion.question_text, answer, score, understood, activeStudent.language);
-        if (aiExposed) {
-          explanation = aiExposed;
-        }
+      if (apiResponse.ok) {
+        const result = await apiResponse.json();
+        score = result.score ?? 85;
+        understood = score >= 80;
+        reason = result.explanation || "Concept evaluated.";
+      } else {
+        throw new Error("Grading API call failed");
       }
-    }
 
-    if (!isAi) {
+      // Generate custom tutor explanation in target language
+      const tutorResponse = await fetch("/api/tutor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-hf-token": hfToken
+        },
+        body: JSON.stringify({
+          questionText: activeQuestion.question_text,
+          language: activeStudent.language
+        })
+      });
+
+      if (tutorResponse.ok) {
+        const tutorResult = await tutorResponse.json();
+        explanation = tutorResult.hint;
+      } else {
+        throw new Error("Tutor API failed");
+      }
+    } catch (err) {
+      console.warn("Using local fallback grading due to error:", err.message);
       // Local fallback
       const localGraded = runLocalGrading(activeQuestion.difficulty, answer);
       score = localGraded.score;
@@ -1016,52 +1167,91 @@ Write a simple explanation explaining the correct concept.
       content: explanation
     }]);
 
-    // Update Local Database records
-    const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff, unlocked_badges: updatedBadges } : s);
-    setStudents(updatedStudents);
-    localStorage.setItem("tut_students", JSON.stringify(updatedStudents));
+    // Update database records (Supabase)
+    try {
+      // 1. Update students table
+      const { error: studError } = await supabase
+        .from('students')
+        .update({ difficulty: newDiff, unlocked_badges: updatedBadges })
+        .eq('id', activeStudent.id);
+      if (studError) throw studError;
 
-    // Log attempt record
-    const newAttempt = {
-      student_id: activeStudent.id,
-      question_text: activeQuestion.question_text,
-      student_answer: answer,
-      understanding_score: score,
-      concept_understood: understood,
-      tutor_explanation: explanation,
-      difficulty_level: oldDiff,
-      created_at: new Date().toISOString()
-    };
+      // 2. Log attempt in attempts table
+      const newAttempt = {
+        student_id: activeStudent.id,
+        question_text: activeQuestion.question_text,
+        student_answer: answer,
+        understanding_score: score,
+        concept_understood: understood,
+        tutor_explanation: explanation,
+        difficulty_level: oldDiff
+      };
 
-    const updatedAttempts = [...attempts, newAttempt];
-    setAttempts(updatedAttempts);
-    localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
+      const { data: attemptData, error: attError } = await supabase
+        .from('attempts')
+        .insert(newAttempt)
+        .select()
+        .single();
+      if (attError) throw attError;
 
-    // Update student progress statistics
-    const studentAttempts = updatedAttempts.filter(a => a.student_id === activeStudent.id);
-    const total = studentAttempts.length;
-    const correct = studentAttempts.filter(a => a.concept_understood).length;
-    const avg = Math.round(studentAttempts.reduce((sum, a) => sum + a.understanding_score, 0) / total);
+      // 3. Update progress statistics
+      const { data: freshAtts } = await supabase
+        .from('attempts')
+        .select('understanding_score, concept_understood')
+        .eq('student_id', activeStudent.id);
 
-    const updatedProgress = progress.map(p => p.student_id === activeStudent.id ? {
-      ...p,
-      total_attempts: total,
-      correct_attempts: correct,
-      mastery_score: avg
-    } : p);
+      const studentAttempts = freshAtts || [newAttempt];
+      const total = studentAttempts.length;
+      const correct = studentAttempts.filter(a => a.concept_understood).length;
+      const avg = Math.round(studentAttempts.reduce((sum, a) => sum + a.understanding_score, 0) / total);
 
-    setProgress(updatedProgress);
-    localStorage.setItem("tut_progress", JSON.stringify(updatedProgress));
+      const { error: progError } = await supabase
+        .from('progress')
+        .update({
+          total_attempts: total,
+          correct_attempts: correct,
+          mastery_score: avg,
+          updated_at: new Date().toISOString()
+        })
+        .eq('student_id', activeStudent.id);
+      if (progError) throw progError;
 
-    // Update current session active student state
-    const currentStudentFresh = updatedStudents.find(s => s.id === activeStudent.id);
-    const currentStudentProg = updatedProgress.find(p => p.student_id === activeStudent.id);
-    setActiveStudent({
-      ...currentStudentFresh,
-      total_attempts: currentStudentProg.total_attempts,
-      correct_attempts: currentStudentProg.correct_attempts,
-      mastery_score: currentStudentProg.mastery_score
-    });
+      // Update Local State for responsive UI
+      const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff, unlocked_badges: updatedBadges } : s);
+      setStudents(updatedStudents);
+
+      const localNewAttempt = attemptData || { ...newAttempt, id: Date.now() + "-att" };
+      setAttempts(prev => [...prev, localNewAttempt]);
+
+      const updatedProgress = progress.map(p => p.student_id === activeStudent.id ? {
+        ...p,
+        total_attempts: total,
+        correct_attempts: correct,
+        mastery_score: avg
+      } : p);
+      setProgress(updatedProgress);
+
+      const currentStudentFresh = updatedStudents.find(s => s.id === activeStudent.id);
+      if (currentStudentFresh) {
+        setActiveStudent({
+          ...currentStudentFresh,
+          total_attempts: total,
+          correct_attempts: correct,
+          mastery_score: avg
+        });
+      }
+    } catch (dbErr) {
+      console.error("Database syncing failed, using localStorage fallbacks:", dbErr.message);
+      // Local fallback sync if DB goes down
+      const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff, unlocked_badges: updatedBadges } : s);
+      setStudents(updatedStudents);
+      const localNewAttempt = { student_id: activeStudent.id, question_text: activeQuestion.question_text, student_answer: answer, understanding_score: score, concept_understood: understood, tutor_explanation: explanation, difficulty_level: oldDiff, created_at: new Date().toISOString(), id: Date.now() + "-att" };
+      setAttempts(prev => [...prev, localNewAttempt]);
+      const currentStudentFresh = updatedStudents.find(s => s.id === activeStudent.id);
+      if (currentStudentFresh) {
+        setActiveStudent(currentStudentFresh);
+      }
+    }
 
     // Load next question corresponding to the new difficulty level
     fetchNextQuestion(newDiff, activeStudent?.language);
@@ -1072,51 +1262,28 @@ Write a simple explanation explaining the correct concept.
     setIsTyping(true);
     let explanation = "";
     
-    // Construct the prompt
-    let prompt = `You are EDUTOR, a warm, encouraging 1:1 math tutor for Class 3 kids. 
-The student has asked you this custom fractions question: "${text}".`;
-    if (imageAttached) {
-      prompt += `\nThey also attached a picture of a worksheet problem depicting: "A circle split into 6 equal parts with 4 parts shaded."`;
-    }
-    prompt += `\n\nPlease solve the problem step-by-step. 
-1. Explain the process in simple visual terms (like pizza slices or chocolate bars) appropriate for a 8-year-old child.
-2. Write the explanation in ${activeStudent.language}.
-3. Break it down clearly into:
-   - What we see (Visual parts)
-   - Step-by-Step Solution
-   - Final Fraction answer
-4. Keep it friendly, positive, and under 150 words. Do not use complex algebra.`;
+    try {
+      const hfToken = localStorage.getItem("tut_hf_token") || "";
+      const response = await fetch("/api/solve-custom", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-hf-token": hfToken
+        },
+        body: JSON.stringify({
+          questionText: text,
+          imageAttached: !!imageAttached
+        })
+      });
 
-    const token = getHFToken();
-    if (token) {
-      try {
-        const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          method: "POST",
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: { max_new_tokens: 300, temperature: 0.5 }
-          })
-        });
-        if (response.ok) {
-          const res = await response.json();
-          if (res && res[0] && res[0].generated_text) {
-            let out = res[0].generated_text;
-            if (out.includes(prompt)) {
-              out = out.replace(prompt, "");
-            }
-            explanation = out.trim();
-          }
-        }
-      } catch (err) {
-        console.error("AI custom solve error:", err);
+      if (response.ok) {
+        const res = await response.json();
+        explanation = res.answer || "";
+      } else {
+        throw new Error("Solve custom API endpoint failed");
       }
-    }
-
-    if (!explanation) {
+    } catch (err) {
+      console.warn("Using custom solver local fallback due to error:", err.message);
       if (activeStudent.language === "Hindi") {
         explanation = `बहुत प्यारा सवाल है! चलिए इसे मिलकर आसान तरीके से हल करते हैं:
         
