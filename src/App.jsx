@@ -2250,7 +2250,7 @@ Write a simple explanation explaining the correct concept.
                         }}>
                           {sub.icon}
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginTop: '0.5rem' }}>{sub.name}</h3>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text)', marginTop: '0.5rem' }}>{sub.name}</h3>
                         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>
                           {sub.desc}
                         </p>
@@ -2283,7 +2283,7 @@ Write a simple explanation explaining the correct concept.
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                       <span>Current Difficulty</span>
-                      <span style={{ fontWeight: 700, color: '#fff' }}>Level {activeStudent.difficulty}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>Level {activeStudent.difficulty}</span>
                     </div>
                     <span className={`difficulty-badge difficulty-${activeStudent.difficulty}`}>
                       Difficulty {activeStudent.difficulty}
@@ -2293,7 +2293,7 @@ Write a simple explanation explaining the correct concept.
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                       <span>Overall Mastery</span>
-                      <span style={{ fontWeight: 700, color: '#fff' }}>{activeStudent.mastery_score || 0}%</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>{activeStudent.mastery_score || 0}%</span>
                     </div>
                     <div className="progress-container">
                       <div className="progress-fill" style={{ width: `${activeStudent.mastery_score || 0}%` }}></div>
@@ -2571,7 +2571,7 @@ Write a simple explanation explaining the correct concept.
                         
                         {/* Image attachment preview if selected */}
                         {customImage && (
-                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem' }}>
+                          <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-dark)', border: '1px solid var(--border-card)', borderRadius: '10px', padding: '0.5rem' }}>
                             <div style={{ fontSize: '1.2rem' }}>🖼️</div>
                             <div style={{ flexGrow: 1, overflow: 'hidden' }}>
                               <div style={{ fontSize: '0.8rem', fontWeight: 'bold', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>{customImageName}</div>
@@ -2615,7 +2615,7 @@ Write a simple explanation explaining the correct concept.
                         </button>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'space-between', width: '90px' }}>
                           {/* File input button for homework photo */}
-                          <label className="btn" style={{ padding: '0.5rem', height: '55px', cursor: 'pointer', borderRadius: '12px', background: '#f8fafc', border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'center' }} title="Attach homework photo">
+                          <label className="btn" style={{ padding: '0.5rem', height: '55px', cursor: 'pointer', borderRadius: '12px', background: 'var(--bg-dark)', border: '1px solid var(--border-card)', display: 'flex', justifyContent: 'center' }} title="Attach homework photo">
                             <input 
                               type="file" 
                               accept="image/*"
@@ -3003,7 +3003,7 @@ Write a simple explanation explaining the correct concept.
 
       {/* Badge Unlock Celebration Overlay */}
       {badgePopup && (
-        <div className="badge-unlock-popup" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000, background: '#ffffff', border: `2px solid ${badgePopup.color}`, borderRadius: '20px', padding: '1.25rem', width: '300px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="badge-unlock-popup" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000, background: 'var(--bg-card)', border: `2px solid ${badgePopup.color}`, borderRadius: '20px', padding: '1.25rem', width: '300px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div style={{ fontSize: '3rem' }}>{badgePopup.icon}</div>
           <div style={{ flexGrow: 1 }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 800, color: badgePopup.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Achievement Unlocked!</div>

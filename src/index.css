@@ -247,7 +247,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 .feature-icon-wrapper {
@@ -294,8 +294,8 @@ main {
   max-width: 800px;
   margin: 3rem auto;
   padding: 2rem;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 24px;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
   position: relative;
@@ -549,7 +549,7 @@ main {
 }
 
 .dashboard-layout .glass-card {
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 /* Buttons */
@@ -721,8 +721,8 @@ td {
 }
 
 .modal {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 24px;
   padding: 2.2rem;
   width: 90%;
@@ -858,7 +858,7 @@ td {
 
 /* Settings statuses */
 .settings-form .glass-card {
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 /* Skeletons */
@@ -1520,6 +1520,30 @@ body.dark-theme input:focus, body.dark-theme select:focus, body.dark-theme texta
   background: #1e293b;
 }
 
+body.dark-theme .btn {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+body.dark-theme .btn:hover {
+  background: #2d3748;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+body.dark-theme .btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+body.dark-theme .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
 body.dark-theme .modal {
   background: #0f172a;
   border-color: rgba(255, 255, 255, 0.1);
@@ -1614,4 +1638,15 @@ body.dark-theme .glass-card:hover {
 body.dark-theme .chat-input-bar {
   background: rgba(15, 23, 42, 0.8) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme .evaluation-card {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-theme .chat-input-bar textarea {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
 }
