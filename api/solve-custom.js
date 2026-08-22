@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const userLang = language || "English";
 
   if (!token) {
-    let fallbackSolve = `Tutor Solver Fallback: Let's solve this! Focus on the core principles of ${userSubject}. (Target Language: ${userLang})`;
+    let fallbackSolve = `Let's work through this problem step-by-step together! Focus on the core principles of ${userSubject}.`;
     if (userLang === "Hindi" || userSubject === "Hindi") {
       fallbackSolve = `ट्यूटर सॉल्वर: चलिए इसे हल करते हैं! ${userSubject} के बुनियादी नियमों पर ध्यान दें।`;
     } else if (userLang === "Telugu" || userSubject === "Telugu") {

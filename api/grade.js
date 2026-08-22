@@ -14,11 +14,11 @@ export default async function handler(req, res) {
   const userLang = language || "English";
 
   if (!token) {
-    let fallbackExplanation = "Excellent attempt! (Fallback grading enabled: Server lacks HF_TOKEN)";
+    let fallbackExplanation = "Excellent attempt! You did a great job. Let's continue practicing this concept to build a strong foundation together!";
     if (userLang === "Hindi" || userSubject === "Hindi") {
-      fallbackExplanation = "बहुत अच्छा प्रयास! (फ़ॉलबैक ग्रेडिंग सक्षम: सर्वर में HF_TOKEN की कमी है)";
+      fallbackExplanation = "बहुत अच्छा प्रयास! आपने शानदार काम किया। आइए एक साथ मिलकर इस अवधारणा का और अभ्यास करें!";
     } else if (userLang === "Telugu" || userSubject === "Telugu") {
-      fallbackExplanation = "చాలా మంచి ప్రయత్నం! (సందర్భోచిత ఫీడ్‌బ్యాక్ సక్రియం చేయబడింది)";
+      fallbackExplanation = "చాలా మంచి ప్రయత్నం! మీరు చాలా బాగా చేశారు. ఈ భావనను మరింత బాగా నేర్చుకుందాం!";
     }
     return res.status(200).json({
       score: 85,

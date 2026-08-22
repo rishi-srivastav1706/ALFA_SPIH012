@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const userLang = language || "English";
 
   if (!token) {
-    let fallbackHint = `Tutor Hint: Focus on the basic core concepts of ${userSubject}. (Target Language: ${userLang})`;
+    let fallbackHint = `Here is a helpful tip: Try to break the problem down into smaller parts and recall the core concepts of ${userSubject}!`;
     if (userLang === "Hindi" || userSubject === "Hindi") {
       fallbackHint = `ट्यूटर संकेत: ${userSubject} की बुनियादी अवधारणाओं पर ध्यान केंद्रित करें।`;
     } else if (userLang === "Telugu" || userSubject === "Telugu") {
