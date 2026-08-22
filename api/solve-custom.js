@@ -6,27 +6,42 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { questionText, imageAttached } = req.body;
+  const { questionText, imageAttached, grade, subject, language } = req.body;
   const token = req.headers['x-hf-token'] || process.env.HF_TOKEN;
 
+  const userGrade = grade || "Grade 3";
+  const userSubject = subject || "Mathematics";
+  const userLang = language || "English";
+
   if (!token) {
+    let fallbackSolve = `Tutor Solver Fallback: Let's solve this! Focus on the core principles of ${userSubject}. (Target Language: ${userLang})`;
+    if (userLang === "Hindi" || userSubject === "Hindi") {
+      fallbackSolve = `ट्यूटर सॉल्वर: चलिए इसे हल करते हैं! ${userSubject} के बुनियादी नियमों पर ध्यान दें।`;
+    } else if (userLang === "Telugu" || userSubject === "Telugu") {
+      fallbackSolve = `సొల్యూషన్: దీనిని సులభంగా సాధిద్దాం! ${userSubject} యొక్క ప్రాథమిక సూత్రాలపై దృష్టి పెట్టండి.`;
+    }
     return res.status(200).json({
-      answer: "Tutor Fallback: Let's solve this! A fraction has two parts: the numerator (how many parts we have) and the denominator (how many total equal parts make the whole). Can you count the total parts first?"
+      answer: fallbackSolve
     });
   }
 
   try {
-    let promptMessage = `Solve this custom fractions homework question step-by-step for a Class 3 school child. Keep it friendly and educational. Question: ${questionText}`;
+    let promptMessage = `Solve this custom homework question step-by-step for a ${userGrade} student in the subject of "${userSubject}". 
+Keep it friendly, age-appropriate, and educational.
+Write the solution in ${userLang}.
+Question: ${questionText}`;
     if (imageAttached) {
       promptMessage += "\n(Note: An image of the worksheet was uploaded. Break down the visual elements step-by-step.)";
     }
 
     const prompt = `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-You are EDUTOR, a child-friendly fractions homework solver and tutor.
+You are EDUTOR, a child-friendly homework solver and tutor.
 Solve the homework question step-by-step.
+Ensure the explanation vocabulary and difficulty match the mindset of a ${userGrade} student.
 Use simple, clear formatting with bullet points.
-Encourage the child and ensure the math is 100% correct.
-Keep it under 4 steps.
+Encourage the student and ensure the content is 100% correct.
+For language subjects like Hindi or Telugu, write exclusively in that language.
+Keep the answer friendly and under 5 steps.
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 ${promptMessage}
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>`;
@@ -49,7 +64,7 @@ ${promptMessage}
     }
 
     const data = await apiResponse.json();
-    let text = data[0]?.generated_text || "Let's count the parts together!";
+    let text = data[0]?.generated_text || "Let's work through this problem step-by-step together!";
 
     return res.status(200).json({ answer: text.trim() });
   } catch (err) {

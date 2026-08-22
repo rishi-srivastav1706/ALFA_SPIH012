@@ -138,6 +138,121 @@ const INITIAL_ATTEMPTS = [
   }
 ];
 
+const LOCAL_QUESTIONS_BANK = {
+  "Mathematics": {
+    "Grade 1-3": [
+      { question_text: "Imagine a circle split into 2 equal parts. If we color 1 part red, what fraction of the circle is colored red?", hint: "Think about halves. One part out of two total parts." },
+      { question_text: "A chocolate bar is divided into 4 equal blocks. You eat 1 block. What fraction of the chocolate bar did you eat?", hint: "Think about quarters. One block out of four total blocks." }
+    ],
+    "Grade 4-7": [
+      { question_text: "Add the fractions 1/4 and 2/4. What do you get?", hint: "Keep the bottom number (denominator) same and add the top numbers!" },
+      { question_text: "Which fraction is larger: 1/3 or 1/5?", hint: "Imagine slicing a cake. Is a piece larger when you slice it into 3 parts or 5 parts?" }
+    ],
+    "Grade 8-10": [
+      { question_text: "Solve for x: x/3 + 1/2 = 5/6", hint: "Find the common denominator (6) and solve the linear equation." },
+      { question_text: "Convert the fraction 3/8 into a decimal and a percentage.", hint: "Divide 3 by 8 to get the decimal, then multiply by 100." }
+    ]
+  },
+  "Science": {
+    "Grade 1-3": [
+      { question_text: "Why do plants need sunlight?", hint: "Sunlight helps plants make their food!" },
+      { question_text: "Which animal lays eggs: a cow or a hen?", hint: "Hens lay eggs in nests, while cows give milk." }
+    ],
+    "Grade 4-7": [
+      { question_text: "Describe the process of photosynthesis briefly.", hint: "Plants use carbon dioxide, water, and sunlight to produce sugar and oxygen." },
+      { question_text: "What is the function of the heart in our body?", hint: "The heart acts as a pump to circulate blood throughout the body." }
+    ],
+    "Grade 8-10": [
+      { question_text: "Explain the difference between plant and animal cells.", hint: "Plant cells have a cell wall and chloroplasts; animal cells do not." },
+      { question_text: "State Newton's First Law of Motion.", hint: "An object stays at rest or in motion unless acted upon by an external force." }
+    ]
+  },
+  "Social Studies": {
+    "Grade 1-3": [
+      { question_text: "What is a globe?", hint: "A globe is a round model of the Earth." },
+      { question_text: "Name two things we can do to save water at home.", hint: "Turn off the tap while brushing teeth, and reuse water where possible." }
+    ],
+    "Grade 4-7": [
+      { question_text: "What are the three main branches of the government?", hint: "The legislature (makes laws), the executive (enforces laws), and the judiciary (interprets laws)." },
+      { question_text: "Explain what a delta is in geography.", hint: "A delta is a triangular tract of sediment deposited at the mouth of a river." }
+    ],
+    "Grade 8-10": [
+      { question_text: "What was the significance of the French Revolution?", hint: "It promoted liberty, equality, and fraternity, and ended absolute monarchy in France." },
+      { question_text: "Explain the concept of Sustainable Development.", hint: "Meeting our needs today without compromising the ability of future generations to meet theirs." }
+    ]
+  },
+  "Hindi": {
+    "Grade 1-3": [
+      { question_text: "संज्ञा किसे कहते हैं? दो उदाहरण दीजिए।", hint: "किसी व्यक्ति, वस्तु, या स्थान के नाम को संज्ञा कहते हैं।" },
+      { question_text: "'सूरज' का एक पर्यायवाची शब्द लिखिए।", hint: "सूरज को दिनकर या सूर्य भी कहते हैं।" }
+    ],
+    "Grade 4-7": [
+      { question_text: "विशेषण और उसके भेदों को संक्षेप में समझाइए।", hint: "संज्ञा या सर्वनाम की विशेषता बताने वाले शब्दों को विशेषण कहते हैं।" },
+      { question_text: "'अमृत' का विलोम शब्द क्या है?", hint: "अमृत का विपरीत विष या ज़हर होता है।" }
+    ],
+    "Grade 8-10": [
+      { question_text: "संधि किसे कहते हैं? इसके भेदों का वर्णन करें।", hint: "दो वर्णों के मेल से होने वाले परिवर्तन को संज्ञा को संधि कहते हैं।" },
+      { question_text: "मुहावरा 'अंगूठा दिखाना' का अर्थ और वाक्य प्रयोग कीजिए।", hint: "इसका अर्थ है ऐन वक्त पर किसी काम के लिए साफ़ मना कर देना।" }
+    ]
+  },
+  "Telugu": {
+    "Grade 1-3": [
+      { question_text: "తెలుగు వర్ణమాలలో అచ్చులు ఎన్ని? అవి ఏవి?", hint: "అ నుండి అః వరకు ఉండే అక్షరాలను అచ్చులు అంటారు. ఇవి మొత్తం 16." },
+      { question_text: "'అమ్మ' పదం యొక్క అర్థం ఏమిటి?", hint: "అమ్మ అంటే తల్లి లేదా మాత అని అర్థం." }
+    ],
+    "Grade 4-7": [
+      { question_text: "క్రియా పదాలు అనగానేమి? రెండు ఉదాహరణలు ఇవ్వండి.", hint: "పనులను తెలిపే పదాలను క్రియా పదాలు అంటారు (ఉదా: చదవడం, రాయడం)." },
+      { question_text: "'సూర్యుడు' పదానికి పర్యాయపదాలు రాయండి.", hint: "భానుడు, రవి అని కూడా అంటారు." }
+    ],
+    "Grade 8-10": [
+      { question_text: "సంధి అనగానేమి? ఉదాహరణతో వివరించండి.", hint: "పూర్వ పర స్వరములకు పరస్వరం ఏకాదేశమగుట సంధి అంటారు." },
+      { question_text: "'గగన కుసుమం' అనే జాతీయానికి అర్థం ఏమిటి?", hint: "జరగని లేదా అసాధ్యమైన విషయాల గురించి చెప్పడానికి దీనిని ఉపయోగిస్తారు." }
+    ]
+  },
+  "Environmental Science": {
+    "Grade 1-3": [
+      { question_text: "What is global warming?", hint: "The heating of Earth's climate system due to greenhouse gases." },
+      { question_text: "Why is recycling plastic important for the oceans?", hint: "Plastic does not decompose and harms marine creatures who eat it." }
+    ],
+    "Grade 4-7": [
+      { question_text: "What is global warming?", hint: "The heating of Earth's climate system due to greenhouse gases." },
+      { question_text: "Why is recycling plastic important for the oceans?", hint: "Plastic does not decompose and harms marine creatures who eat it." }
+    ],
+    "Grade 8-10": [
+      { question_text: "What is global warming?", hint: "The heating of Earth's climate system due to greenhouse gases." },
+      { question_text: "Why is recycling plastic important for the oceans?", hint: "Plastic does not decompose and harms marine creatures who eat it." }
+    ]
+  },
+  "Physical Science": {
+    "Grade 1-3": [
+      { question_text: "What is Ohm's Law?", hint: "V = I * R, voltage equals current times resistance." },
+      { question_text: "What is the difference between an element and a compound?", hint: "Elements are pure substances of one atom type; compounds are combinations of elements." }
+    ],
+    "Grade 4-7": [
+      { question_text: "What is Ohm's Law?", hint: "V = I * R, voltage equals current times resistance." },
+      { question_text: "What is the difference between an element and a compound?", hint: "Elements are pure substances of one atom type; compounds are combinations of elements." }
+    ],
+    "Grade 8-10": [
+      { question_text: "What is Ohm's Law?", hint: "V = I * R, voltage equals current times resistance." },
+      { question_text: "What is the difference between an element and a compound?", hint: "Elements are pure substances of one atom type; compounds are combinations of elements." }
+    ]
+  },
+  "Biology": {
+    "Grade 1-3": [
+      { question_text: "What is the role of mitochondria in a cell?", hint: "Mitochondria are the powerhouses of the cell, generating energy (ATP)." },
+      { question_text: "Explain the difference between arteries and veins.", hint: "Arteries carry oxygen-rich blood away from the heart; veins return oxygen-poor blood." }
+    ],
+    "Grade 4-7": [
+      { question_text: "What is the role of mitochondria in a cell?", hint: "Mitochondria are the powerhouses of the cell, generating energy (ATP)." },
+      { question_text: "Explain the difference between arteries and veins.", hint: "Arteries carry oxygen-rich blood away from the heart; veins return oxygen-poor blood." }
+    ],
+    "Grade 8-10": [
+      { question_text: "What is the role of mitochondria in a cell?", hint: "Mitochondria are the powerhouses of the cell, generating energy (ATP)." },
+      { question_text: "Explain the difference between arteries and veins.", hint: "Arteries carry oxygen-rich blood away from the heart; veins return oxygen-poor blood." }
+    ]
+  }
+};
+
 // Curated pool of 5 difficulty levels of Fractions questions for Class 3
 const QUESTIONS_POOL = {
   1: {
@@ -257,6 +372,8 @@ export default function App() {
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [addName, setAddName] = useState("");
   const [addLanguage, setAddLanguage] = useState("English");
+  const [addGrade, setAddGrade] = useState(3);
+  const [activeSubject, setActiveSubject] = useState(null);
 
   // Teacher Authentication States
   const [currentTeacher, setCurrentTeacher] = useState(() => {
@@ -282,6 +399,7 @@ export default function App() {
   const [selfName, setSelfName] = useState("");
   const [selfLanguage, setSelfLanguage] = useState("English");
   const [selfPin, setSelfPin] = useState("");
+  const [selfGrade, setSelfGrade] = useState(3);
 
   // HF Token & Settings states
   const [hfTokenInput, setHfTokenInput] = useState(() => localStorage.getItem("tut_hf_token") || "");
@@ -696,19 +814,38 @@ export default function App() {
       language: selfLanguage,
       difficulty: 1,
       pin: selfPin.trim() || null,
+      grade: selfGrade,
       unlocked_badges: ["first-steps"],
       teacher_id: teacherId
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('students')
-        .insert(studentRecord)
-        .select()
-        .single();
-      if (error) throw error;
+    let newStudent = null;
 
-      const newStudent = data;
+    try {
+      // Try to insert student. Handle grade column absence dynamically.
+      try {
+        const { data, error } = await supabase
+          .from('students')
+          .insert(studentRecord)
+          .select()
+          .single();
+        if (error) throw error;
+        newStudent = data;
+      } catch (dbErr) {
+        if (dbErr.message.includes("grade") || dbErr.message.includes("column")) {
+          console.warn("DB lacks 'grade' column. Retrying insert without 'grade' column...");
+          const { grade, ...restRecord } = studentRecord;
+          const { data, error } = await supabase
+            .from('students')
+            .insert(restRecord)
+            .select()
+            .single();
+          if (error) throw error;
+          newStudent = { ...data, grade: studentRecord.grade };
+        } else {
+          throw dbErr;
+        }
+      }
 
       const { error: progError } = await supabase
         .from('progress')
@@ -820,19 +957,38 @@ export default function App() {
       language: addLanguage,
       difficulty: 1,
       pin: addPin.trim() || null,
+      grade: addGrade,
       unlocked_badges: ["first-steps"],
       teacher_id: currentTeacher.id
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('students')
-        .insert(studentRecord)
-        .select()
-        .single();
-      if (error) throw error;
+    let newStudent = null;
 
-      const newStudent = data;
+    try {
+      // Try to insert student. Handle grade column absence dynamically.
+      try {
+        const { data, error } = await supabase
+          .from('students')
+          .insert(studentRecord)
+          .select()
+          .single();
+        if (error) throw error;
+        newStudent = data;
+      } catch (dbErr) {
+        if (dbErr.message.includes("grade") || dbErr.message.includes("column")) {
+          console.warn("DB lacks 'grade' column. Retrying insert without 'grade' column...");
+          const { grade, ...restRecord } = studentRecord;
+          const { data, error } = await supabase
+            .from('students')
+            .insert(restRecord)
+            .select()
+            .single();
+          if (error) throw error;
+          newStudent = { ...data, grade: studentRecord.grade };
+        } else {
+          throw dbErr;
+        }
+      }
 
       const { error: progError } = await supabase
         .from('progress')
@@ -975,13 +1131,28 @@ export default function App() {
     if (!student) return;
 
     setActiveStudent(student);
+    setActiveSubject(null);
+    setChatMessages([]);
+  };
+
+  const selectSubject = async (subject) => {
+    if (!activeStudent) return;
+    setActiveSubject(subject);
     
-    // Welcome message based on language preferred
-    let welcome = `Hi ${student.name}! I'm EDUTOR, your fractions buddy. 🌟 Let's learn math together. I have an interesting problem for you!`;
-    if (student.language === "Hindi") {
-      welcome = `नमस्ते ${student.name}! मैं एडुटर हूँ, आपका मैथ बडी। 🌟 चलिए मिलकर भिन्न (Fractions) सीखते हैं। आपके लिए नीचे एक सवाल है!`;
-    } else if (student.language === "Telugu") {
-      welcome = `నమస్తే ${student.name}! నేను ఎడ్యుటర్, నీ మ్యాథ్స్ ఫ్రెండ్ ని. 🌟 కలిసి భిన్నాలు నేర్చుకుందాం. నీ కోసం ఒక లెక్క కింద ఉంది!`;
+    // Choose tutoring language context based on subject or student preference
+    let tutoringLang = activeStudent.language || "English";
+    if (subject === "Hindi") {
+      tutoringLang = "Hindi";
+    } else if (subject === "Telugu") {
+      tutoringLang = "Telugu";
+    }
+
+    // Welcome message based on subject and language
+    let welcome = `Hi ${activeStudent.name}! I'm EDUTOR, your 1:1 buddy for ${subject}. 🌟 Let's learn together! I have a fun practice question for you.`;
+    if (tutoringLang === "Hindi" || subject === "Hindi") {
+      welcome = `नमस्ते ${activeStudent.name}! मैं एडुटर हूँ, ${subject} के लिए आपका ट्यूटर। 🌟 चलिए मिलकर सीखते हैं! आपके लिए एक मजेदार सवाल नीचे है।`;
+    } else if (tutoringLang === "Telugu" || subject === "Telugu") {
+      welcome = `నమస్తే ${activeStudent.name}! నేను ఎడ్యుటర్ ని. ${subject} నేర్చుకోవడానికి నేను నీకు సహాయం చేస్తాను. 🌟 నీ కోసం ఒక ప్రశ్న కింద ఉంది!`;
     }
 
     const welcomeMsg = {
@@ -993,27 +1164,25 @@ export default function App() {
 
     setChatMessages([welcomeMsg]);
 
-    // Fetch and sync attempts for this student
+    // Fetch and sync attempts for this student and subject
     try {
       const { data: dbAtts, error } = await supabase
         .from('attempts')
         .select('*')
-        .eq('student_id', studentId)
+        .eq('student_id', activeStudent.id)
+        .eq('subject_name', subject)
         .order('created_at', { ascending: true });
       if (error) throw error;
 
       if (dbAtts && dbAtts.length > 0) {
-        // Map historical attempts to chat messages
         const history = [];
         dbAtts.forEach(att => {
-          // Student response
           history.push({
             id: att.id + "-stud",
             sender: "student",
             type: "text",
             content: att.student_answer
           });
-          // Evaluation card
           history.push({
             id: att.id + "-eval",
             sender: "system",
@@ -1026,7 +1195,6 @@ export default function App() {
               newDiff: att.difficulty_level
             }
           });
-          // Tutor reply
           history.push({
             id: att.id + "-tutor",
             sender: "tutor",
@@ -1037,10 +1205,41 @@ export default function App() {
         setChatMessages([welcomeMsg, ...history]);
       }
     } catch (err) {
-      console.error("Error loading student session attempts:", err);
+      console.warn("Could not load subject history from Supabase, checking local attempts:", err.message);
+      const studentAttempts = attempts.filter(a => a.student_id === activeStudent.id && (a.subject_name === subject || (!a.subject_name && subject === "Mathematics")));
+      if (studentAttempts && studentAttempts.length > 0) {
+        const history = [];
+        studentAttempts.forEach(att => {
+          history.push({
+            id: att.id + "-stud",
+            sender: "student",
+            type: "text",
+            content: att.student_answer
+          });
+          history.push({
+            id: att.id + "-eval",
+            sender: "system",
+            type: "eval",
+            content: {
+              score: att.understanding_score,
+              understood: att.concept_understood,
+              reason: att.understanding_score >= 80 ? "Concept understood!" : "Review needed.",
+              oldDiff: att.difficulty_level,
+              newDiff: att.difficulty_level
+            }
+          });
+          history.push({
+            id: att.id + "-tutor",
+            sender: "tutor",
+            type: "text",
+            content: att.tutor_explanation
+          });
+        });
+        setChatMessages([welcomeMsg, ...history]);
+      }
     }
 
-    fetchNextQuestion(student.difficulty, student.language);
+    fetchNextQuestion(activeStudent.difficulty, tutoringLang, subject);
   };
 
   const exitStudentSession = () => {
@@ -1049,19 +1248,63 @@ export default function App() {
     setChatMessages([]);
   };
 
-  const fetchNextQuestion = (difficultyLevel, studentLang = null) => {
+  const fetchNextQuestion = async (difficultyLevel, studentLang = null, subjectName = null) => {
     setHintVisible(false);
-    const q = QUESTIONS_POOL[difficultyLevel] || QUESTIONS_POOL[1];
-    
-    // Select student's active language translation (falls back to English)
+    const sub = subjectName || activeSubject || "Mathematics";
     const lang = studentLang || activeStudent?.language || "English";
-    const localized = q[lang] || q["English"];
-    
-    setActiveQuestion({
-      difficulty: difficultyLevel,
-      question_text: localized.text,
-      hint: localized.hint
-    });
+    const grade = activeStudent?.grade || 3;
+
+    setIsTyping(true);
+
+    try {
+      const hfToken = localStorage.getItem("tut_hf_token") || "";
+      const apiResponse = await fetch("/api/generate-question", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-hf-token": hfToken
+        },
+        body: JSON.stringify({
+          grade: `Grade ${grade}`,
+          subject: sub,
+          difficulty: difficultyLevel,
+          language: lang
+        })
+      });
+
+      if (apiResponse.ok) {
+        const result = await apiResponse.json();
+        setActiveQuestion({
+          question_text: result.question_text || `Explain a concept in ${sub}.`,
+          hint: result.hint || `Think about ${sub}!`,
+          difficulty: difficultyLevel
+        });
+      } else {
+        throw new Error("Generation API call failed");
+      }
+    } catch (err) {
+      console.warn("Using local question bank fallback:", err.message);
+      
+      let gradeGroup = "Grade 1-3";
+      if (grade >= 4 && grade <= 7) {
+        gradeGroup = "Grade 4-7";
+      } else if (grade >= 8) {
+        gradeGroup = "Grade 8-10";
+      }
+
+      const subjectPool = LOCAL_QUESTIONS_BANK[sub] || LOCAL_QUESTIONS_BANK["Mathematics"];
+      const list = subjectPool[gradeGroup] || subjectPool["Grade 1-3"];
+      
+      const index = (difficultyLevel - 1) % list.length;
+      const selected = list[index] || list[0];
+
+      setActiveQuestion({
+        ...selected,
+        difficulty: difficultyLevel
+      });
+    }
+
+    setIsTyping(false);
   };
 
   // Standalone JS Grader fallback (in case HF API key is empty)
@@ -1246,6 +1489,14 @@ Write a simple explanation explaining the correct concept.
 
     setIsTyping(true);
 
+    // Choose tutoring language context based on subject or student preference
+    let tutoringLang = activeStudent.language || "English";
+    if (activeSubject === "Hindi") {
+      tutoringLang = "Hindi";
+    } else if (activeSubject === "Telugu") {
+      tutoringLang = "Telugu";
+    }
+
     // Call grading engine via secure serverless proxy
     let score = 0;
     let understood = false;
@@ -1262,7 +1513,10 @@ Write a simple explanation explaining the correct concept.
         },
         body: JSON.stringify({
           questionText: activeQuestion.question_text,
-          studentAnswer: answer
+          studentAnswer: answer,
+          grade: `Grade ${activeStudent.grade || 3}`,
+          subject: activeSubject || "Mathematics",
+          language: tutoringLang
         })
       });
 
@@ -1284,7 +1538,9 @@ Write a simple explanation explaining the correct concept.
         },
         body: JSON.stringify({
           questionText: activeQuestion.question_text,
-          language: activeStudent.language
+          grade: `Grade ${activeStudent.grade || 3}`,
+          subject: activeSubject || "Mathematics",
+          language: tutoringLang
         })
       });
 
@@ -1301,7 +1557,7 @@ Write a simple explanation explaining the correct concept.
       score = localGraded.score;
       understood = localGraded.understood;
       reason = localGraded.reason;
-      explanation = getLocalExplanation(activeQuestion.difficulty, score, activeStudent.language);
+      explanation = getLocalExplanation(activeQuestion.difficulty, score, tutoringLang);
     }
 
     setIsTyping(false);
@@ -1345,7 +1601,7 @@ Write a simple explanation explaining the correct concept.
         setTimeout(() => setBadgePopup(null), 5000);
       }
     }
-    if ((activeStudent.language === "Hindi" || activeStudent.language === "Telugu") && !updatedBadges.includes("multilingual")) {
+    if ((tutoringLang === "Hindi" || tutoringLang === "Telugu") && !updatedBadges.includes("multilingual")) {
       updatedBadges.push("multilingual");
       const badge = BADGES.find(b => b.id === "multilingual");
       if (badge) {
@@ -1388,15 +1644,34 @@ Write a simple explanation explaining the correct concept.
         understanding_score: score,
         concept_understood: understood,
         tutor_explanation: explanation,
-        difficulty_level: oldDiff
+        difficulty_level: oldDiff,
+        subject_name: activeSubject || "Mathematics"
       };
 
-      const { data: attemptData, error: attError } = await supabase
-        .from('attempts')
-        .insert(newAttempt)
-        .select()
-        .single();
-      if (attError) throw attError;
+      let attemptData = null;
+      try {
+        const { data, error: attError } = await supabase
+          .from('attempts')
+          .insert(newAttempt)
+          .select()
+          .single();
+        if (attError) throw attError;
+        attemptData = data;
+      } catch (dbErr) {
+        if (dbErr.message.includes("subject_name") || dbErr.message.includes("column")) {
+          console.warn("DB lacks 'subject_name' column. Retrying without it...");
+          const { subject_name, ...restAttempt } = newAttempt;
+          const { data, error: retryErr } = await supabase
+            .from('attempts')
+            .insert(restAttempt)
+            .select()
+            .single();
+          if (retryErr) throw retryErr;
+          attemptData = { ...data, subject_name: newAttempt.subject_name };
+        } else {
+          throw dbErr;
+        }
+      }
 
       // 3. Update progress statistics
       const { data: freshAtts } = await supabase
@@ -1449,8 +1724,13 @@ Write a simple explanation explaining the correct concept.
       // Local fallback sync if DB goes down
       const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff, unlocked_badges: updatedBadges } : s);
       setStudents(updatedStudents);
-      const localNewAttempt = { student_id: activeStudent.id, question_text: activeQuestion.question_text, student_answer: answer, understanding_score: score, concept_understood: understood, tutor_explanation: explanation, difficulty_level: oldDiff, created_at: new Date().toISOString(), id: Date.now() + "-att" };
-      setAttempts(prev => [...prev, localNewAttempt]);
+      const localNewAttempt = { student_id: activeStudent.id, question_text: activeQuestion.question_text, student_answer: answer, understanding_score: score, concept_understood: understood, tutor_explanation: explanation, difficulty_level: oldDiff, subject_name: activeSubject || "Mathematics", created_at: new Date().toISOString(), id: Date.now() + "-att" };
+      const updatedAttempts = [...attempts, localNewAttempt];
+      setAttempts(updatedAttempts);
+      
+      localStorage.setItem("tut_students", JSON.stringify(updatedStudents));
+      localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
+
       const currentStudentFresh = updatedStudents.find(s => s.id === activeStudent.id);
       if (currentStudentFresh) {
         setActiveStudent(currentStudentFresh);
@@ -1458,7 +1738,7 @@ Write a simple explanation explaining the correct concept.
     }
 
     // Load next question corresponding to the new difficulty level
-    fetchNextQuestion(newDiff, activeStudent?.language);
+    fetchNextQuestion(newDiff, tutoringLang, activeSubject);
     setIsSubmitting(false);
   };
 
@@ -1466,6 +1746,14 @@ Write a simple explanation explaining the correct concept.
     setIsTyping(true);
     let explanation = "";
     
+    // Choose tutoring language context based on subject or student preference
+    let tutoringLang = activeStudent.language || "English";
+    if (activeSubject === "Hindi") {
+      tutoringLang = "Hindi";
+    } else if (activeSubject === "Telugu") {
+      tutoringLang = "Telugu";
+    }
+
     try {
       const hfToken = localStorage.getItem("tut_hf_token") || "";
       const response = await fetch("/api/solve-custom", {
@@ -1476,7 +1764,10 @@ Write a simple explanation explaining the correct concept.
         },
         body: JSON.stringify({
           questionText: text,
-          imageAttached: !!imageAttached
+          imageAttached: !!imageAttached,
+          grade: `Grade ${activeStudent.grade || 3}`,
+          subject: activeSubject || "Mathematics",
+          language: tutoringLang
         })
       });
 
@@ -1488,33 +1779,30 @@ Write a simple explanation explaining the correct concept.
       }
     } catch (err) {
       console.warn("Using custom solver local fallback due to error:", err.message);
-      if (activeStudent.language === "Hindi") {
+      if (tutoringLang === "Hindi" || activeSubject === "Hindi") {
         explanation = `बहुत प्यारा सवाल है! चलिए इसे मिलकर आसान तरीके से हल करते हैं:
         
-1. **हम क्या देखते हैं**: आपने पूछा है "${text}" ${imageAttached ? "(और वर्कशीट की फोटो अपलोड की है)" : ""}।
-2. **पिज्जा का उदाहरण**: सोचिए हमारे पास एक स्वादिष्ट गोल पिज्जा है। 
-3. **कदम-दर-कदम समाधान**:
-   - यदि हम पिज्जा को बराबर टुकड़ों में काटते हैं, तो कुल टुकड़ों की संख्या नीचे लिखी जाती है (हर या Denominator)।
-   - रंगे हुए या खाए हुए टुकड़ों की संख्या ऊपर लिखी जाती है (अंश या Numerator)।
-4. **उत्तर**: उदाहरण के लिए, यदि कुल 4 टुकड़ों में से 2 टुकड़े रंगे हैं, तो वह 2/4 होगा, जो कि बिल्कुल आधा (1/2) पिज्जा होता है! 🌟 आप बहुत अच्छा सीख रहे हैं!`;
-      } else if (activeStudent.language === "Telugu") {
+1. **हम क्या देखते हैं**: आपने पूछा है "${text}" ${imageAttached ? "(और फोटो अपलोड की है)" : ""}।
+2. **कदम-दर-कदम समाधान**:
+   - हम सवाल को छोटे-छोटे हिस्सों में तोड़ेंगे।
+   - सबसे पहले मुख्य अवधारणा को समझें और फिर धीरे-धीरे आगे बढ़ें।
+3. **उत्तर**: आप बहुत अच्छा कर रहे हैं! 🌟 प्रयास करते रहें!`;
+      } else if (tutoringLang === "Telugu" || activeSubject === "Telugu") {
         explanation = `చాలా మంచి ప్రశ్న! దీనిని సులభంగా అర్థం చేసుకుందాం:
         
-1. **మనం చూసేది**: మీ ప్రశ్న: "${text}" ${imageAttached ? "(మరియు వర్క్షీట్ ఫోటో అటాచ్ చేసారు)" : ""}।
-2. **పిజ్జా ఉదాహరణ**: ఒక గుండ్రటి పిజ్జాను ఊహించుకోండి.
-3. **పరిష్కార పద్ధతి**:
-   - మొత్తం పిజ్జా ముక్కల సంఖ్యను కింద రాస్తాము (హారము లేదా Denominator).
-   - రంగు వేసిన లేదా తిన్న ముక్కల సంఖ్యను పైన రాస్తాము (లవము లేదా Numerator).
-4. **సమాధానం**: ఉదాహరణకు, మొత్తం 4 ముక్కలలో 2 ముక్కలు తీసుకుంటే, అది 2/4 అవుతుంది. ఇది ఖచ్చితంగా సగం (1/2) పిజ్జాకు సమానం! 🌟 చాలా బాగా చేసారు!`;
+1. **మనం చూసేది**: మీ ప్రశ్న: "${text}" ${imageAttached ? "(మరియు ఫోటో అటాచ్ చేసారు)" : ""}।
+2. **పరిష్కార పద్ధతి**:
+   - మనం ఈ సమస్యను సులభమైన భాగాలుగా విభజించుకుందాం.
+   - ప్రాథమిక సూత్రాల ఆధారంగా దీనిని సులభంగా సాధించవచ్చు.
+3. **సమాధానం**: చాలా బాగా చేసారు! 🌟 ఇలాగే కొనసాగించండి!`;
       } else {
         explanation = `Great question! Let's solve this step-by-step together:
 
-1. **What We See**: You asked: "${text}" ${imageAttached ? "(and uploaded a worksheet image)" : ""}.
-2. **Visual Analogy**: Let's imagine a delicious round pizza. 
-3. **Step-by-Step**:
-   - We count the total slices (that's our bottom number, the denominator).
-   - We count the colored or eaten slices (that's our top number, the numerator).
-4. **Final Answer**: For example, if you have 2 slices out of 4 total, that's 2/4, which is exactly equal to 1/2 (half) of the pizza! 🌟 You are doing fantastic!`;
+1. **What We See**: You asked: "${text}" ${imageAttached ? "(and uploaded an image)" : ""}.
+2. **Step-by-Step**:
+   - We break down the question into simpler parts.
+   - We analyze the core concepts step-by-step.
+3. **Final Answer**: You are doing fantastic! 🌟 Keep it up!`;
       }
     }
 
@@ -2144,6 +2432,7 @@ Write a simple explanation explaining the correct concept.
                     <thead>
                       <tr>
                         <th>Student Name</th>
+                        <th>Grade</th>
                         <th>Language</th>
                         <th>Current Difficulty</th>
                         <th>Mastery Score</th>
@@ -2154,7 +2443,7 @@ Write a simple explanation explaining the correct concept.
                     <tbody>
                       {rosterData.length === 0 ? (
                         <tr>
-                          <td colSpan="6" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem' }}>
+                          <td colSpan="7" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem' }}>
                             No students registered. Click "Add Student" to begin!
                           </td>
                         </tr>
@@ -2168,6 +2457,11 @@ Write a simple explanation explaining the correct concept.
                                   <div className="avatar">{letter}</div>
                                   <span style={{ fontWeight: 600, color: '#fff' }}>{s.name}</span>
                                 </div>
+                              </td>
+                              <td>
+                                <span style={{ fontWeight: 600, color: '#f59e0b' }}>
+                                  Grade {s.grade || 3}
+                                </span>
                               </td>
                               <td>
                                 <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.6rem', borderRadius: '8px', fontSize: '0.85rem' }}>
@@ -2320,7 +2614,7 @@ Write a simple explanation explaining the correct concept.
                             )}
                           </div>
                           <h4 style={{ marginTop: '1rem', fontWeight: 700 }}>{s.name}</h4>
-                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Level {s.difficulty} • {s.language}</p>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Grade {s.grade || 3} • Level {s.difficulty} • {s.language}</p>
                         </div>
                       );
                     })}
@@ -2329,8 +2623,96 @@ Write a simple explanation explaining the correct concept.
               </div>
             )}
 
+            {/* Subject Selection Dashboard */}
+            {activeStudent && !activeSubject && (
+              <div className="login-view" style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Welcome, {activeStudent.name}! 👋</h2>
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: '0.25rem', fontSize: '1.05rem' }}>
+                      Choose a subject to learn today (Grade {activeStudent.grade || 3})
+                    </p>
+                  </div>
+                  <button className="btn btn-secondary" onClick={exitStudentSession}>
+                    <LogOut style={{ width: 14, height: 14 }} /> Switch Profile
+                  </button>
+                </div>
+
+                <div className="login-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+                  {(() => {
+                    const grade = activeStudent.grade || 3;
+                    let availableSubjects = [];
+                    if (grade >= 1 && grade <= 3) {
+                      availableSubjects = [
+                        { name: "Mathematics", icon: "📐", desc: "Numbers, geometry, and fractions magic!", color: "#6366f1" },
+                        { name: "Hindi", icon: "🇮🇳", desc: "हिंदी भाषा, व्याकरण और सुंदर कविताएँ।", color: "#f59e0b" },
+                        { name: "Telugu", icon: "🌅", desc: "తెలుగు భాష, అక్షరాలు మరియు పద్యాలు.", color: "#10b981" },
+                        { name: "Science", icon: "🔬", desc: "Plants, animals, and the wonders of nature!", color: "#ec4899" },
+                        { name: "Social Studies", icon: "🌍", desc: "Maps, safety, and our lovely neighborhood.", color: "#06b6d4" }
+                      ];
+                    } else if (grade >= 4 && grade <= 7) {
+                      availableSubjects = [
+                        { name: "Mathematics", icon: "📐", desc: "Fractions, decimals, and algebraic puzzles!", color: "#6366f1" },
+                        { name: "Hindi", icon: "🇮🇳", desc: "हिंदी भाषा, गद्य, पद्य और लेखन कौशल।", color: "#f59e0b" },
+                        { name: "Telugu", icon: "🌅", desc: "తెలుగు వ్యాకరణం, భావాలు మరియు రచనలు.", color: "#10b981" },
+                        { name: "Science", icon: "🔬", desc: "Body organs, force, energy, and plant lifecycle.", color: "#ec4899" },
+                        { name: "Environmental Science", icon: "🌱", desc: "Eco systems, saving our planet, and recycling.", color: "#84cc16" },
+                        { name: "Social Studies", icon: "🌍", desc: "Ancient civilizations, geography, and climate.", color: "#06b6d4" }
+                      ];
+                    } else {
+                      availableSubjects = [
+                        { name: "Mathematics", icon: "📐", desc: "Linear equations, geometry proofs, and statistics.", color: "#6366f1" },
+                        { name: "Hindi", icon: "🇮🇳", desc: "उच्च स्तरीय हिंदी साहित्य और व्याकरण।", color: "#f59e0b" },
+                        { name: "Telugu", icon: "🌅", desc: "ఉన్నత స్థాయి తెలుగు సాహిత్యం మరియు వ్యాకరణం.", color: "#10b981" },
+                        { name: "Physical Science", icon: "⚡", desc: "Physics forces, electricity, and chemistry bonds.", color: "#a855f7" },
+                        { name: "Biology", icon: "🧬", desc: "Cells structure, human anatomy, and genetics.", color: "#ec4899" },
+                        { name: "Social Studies", icon: "🌍", desc: "World history, economics, and political systems.", color: "#06b6d4" }
+                      ];
+                    }
+
+                    return availableSubjects.map(sub => (
+                      <div 
+                        key={sub.name} 
+                        className="glass-card student-card" 
+                        onClick={() => selectSubject(sub.name)}
+                        style={{
+                          padding: '1.5rem',
+                          border: `1px solid rgba(255,255,255,0.06)`,
+                          borderTop: `4px solid ${sub.color}`,
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '3rem',
+                          background: `${sub.color}15`,
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {sub.icon}
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginTop: '0.5rem' }}>{sub.name}</h3>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>
+                          {sub.desc}
+                        </p>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+
             {/* Active Tutoring Interface */}
-            {activeStudent && (
+            {activeStudent && activeSubject && (
               <div className="session-container">
                 {/* Sidebar details */}
                 <div className="glass-card session-sidebar">
@@ -2432,8 +2814,15 @@ Write a simple explanation explaining the correct concept.
                 <div className="glass-card chat-panel">
                   <div className="chat-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={() => setActiveSubject(null)} 
+                        style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', height: 'auto', borderRadius: '10px' }}
+                      >
+                        ← Subjects
+                      </button>
                       <CircleDot style={{ width: 14, height: 14, color: '#10b981', fill: '#10b981' }} />
-                      <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Fractions Tutoring Box</span>
+                      <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{activeSubject} Tutoring Box</span>
                     </div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
                       {activeStudent.correct_attempts || 0} / {activeStudent.total_attempts || 0} correct answers
@@ -3037,6 +3426,25 @@ Write a simple explanation explaining the correct concept.
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Student Grade (Class)</label>
+                <select 
+                  className="form-control"
+                  value={addGrade}
+                  onChange={(e) => setAddGrade(Number(e.target.value))}
+                >
+                  <option value="1">1st Grade</option>
+                  <option value="2">2nd Grade</option>
+                  <option value="3">3rd Grade</option>
+                  <option value="4">4th Grade</option>
+                  <option value="5">5th Grade</option>
+                  <option value="6">6th Grade</option>
+                  <option value="7">7th Grade</option>
+                  <option value="8">8th Grade</option>
+                  <option value="9">9th Grade</option>
+                  <option value="10">10th Grade</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label>Login PIN (Optional, 4 Digits)</label>
                 <input 
                   type="password" 
@@ -3130,6 +3538,25 @@ Write a simple explanation explaining the correct concept.
                   <option value="English">English</option>
                   <option value="Hindi">Hindi (हिंदी)</option>
                   <option value="Telugu">Telugu (తెలుగు)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>My Grade (Class)</label>
+                <select 
+                  className="form-control"
+                  value={selfGrade}
+                  onChange={(e) => setSelfGrade(Number(e.target.value))}
+                >
+                  <option value="1">1st Grade</option>
+                  <option value="2">2nd Grade</option>
+                  <option value="3">3rd Grade</option>
+                  <option value="4">4th Grade</option>
+                  <option value="5">5th Grade</option>
+                  <option value="6">6th Grade</option>
+                  <option value="7">7th Grade</option>
+                  <option value="8">8th Grade</option>
+                  <option value="9">9th Grade</option>
+                  <option value="10">10th Grade</option>
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
