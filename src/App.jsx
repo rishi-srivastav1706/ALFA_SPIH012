@@ -358,7 +358,14 @@ export default function App() {
   const [attempts, setAttempts] = useState([]);
 
   // Active Session states
-  const [activeStudent, setActiveStudent] = useState(null);
+  const [activeStudent, setActiveStudent] = useState(() => {
+    try {
+      const stored = localStorage.getItem("tut_active_student");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [studentAnswer, setStudentAnswer] = useState("");
   const [hintVisible, setHintVisible] = useState(false);
@@ -368,47 +375,21 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const chatBottomRef = useRef(null);
 
-  // Modals / Add Student Form
-  const [isAddingStudent, setIsAddingStudent] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addLanguage, setAddLanguage] = useState("English");
-  const [addGrade, setAddGrade] = useState(3);
   const [activeSubject, setActiveSubject] = useState(null);
 
-  // Teacher Authentication States
-  const [currentTeacher, setCurrentTeacher] = useState(() => {
-    try {
-      const stored = localStorage.getItem("tut_active_teacher");
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Student Authentication / Popup states
   const [authTab, setAuthTab] = useState("login"); // "login" or "signup"
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [teacherEmail, setTeacherEmail] = useState("");
-  const [teacherPassword, setTeacherPassword] = useState("");
-  const [teacherName, setTeacherName] = useState("");
-  const [schoolName, setSchoolName] = useState("");
+  const [loginName, setLoginName] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
-  // Student PIN States
-  const [selectedStudentForPin, setSelectedStudentForPin] = useState(null);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState("");
-  const [addPin, setAddPin] = useState(""); // PIN in teacher's add student modal
-  const [isAddingStudentSelf, setIsAddingStudentSelf] = useState(false);
-  const [selfName, setSelfName] = useState("");
-  const [selfLanguage, setSelfLanguage] = useState("English");
-  const [selfPin, setSelfPin] = useState("");
-  const [selfGrade, setSelfGrade] = useState(3);
+  const [registerName, setRegisterName] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerLanguage, setRegisterLanguage] = useState("English");
+  const [registerGrade, setRegisterGrade] = useState(3);
 
-  // HF Token & Settings states
+  // HF Token config (available in profile page)
   const [hfTokenInput, setHfTokenInput] = useState(() => localStorage.getItem("tut_hf_token") || "");
-
-  // Sandbox States
-  const [sandboxShape, setSandboxShape] = useState("circle");
-  const [sandboxDenom, setSandboxDenom] = useState(4);
-  const [sandboxShadedSlices, setSandboxShadedSlices] = useState({ 0: true, 1: true });
 
   // Achievements/Badges Popup
   const [badgePopup, setBadgePopup] = useState(null);
@@ -625,29 +606,6 @@ export default function App() {
     };
 
     initDatabase();
-
-    // Listen to Supabase Auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // Fetch teacher profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        setCurrentTeacher({
-          id: session.user.id,
-          email: session.user.email,
-          name: profile?.name || session.user.email,
-          school: profile?.school || ""
-        });
-      } else {
-        setCurrentTeacher(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   // Sync scroll chat feed
@@ -701,133 +659,26 @@ export default function App() {
     }
   };
 
-  // Teacher Authentication handlers
-  const handleTeacherSignup = async (e) => {
+  // Student Authentication handlers
+  const handleStudentSignup = async (e) => {
     e.preventDefault();
-    if (!teacherName.trim() || !teacherEmail.trim() || !teacherPassword.trim()) {
-      addToast("Please fill in all required fields.", "error");
+    if (!registerName.trim() || !registerPassword.trim()) {
+      addToast("Please fill in name and password.", "error");
       return;
     }
-
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: teacherEmail.trim(),
-        password: teacherPassword.trim()
-      });
-      if (authError) throw authError;
-
-      const user = authData.user;
-      if (!user) throw new Error("Teacher registration failed.");
-
-      // Insert profile details
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: user.id,
-          name: teacherName.trim(),
-          school: schoolName.trim()
-        });
-      if (profileError) throw profileError;
-
-      addToast(`Welcome, Teacher ${teacherName.trim()}! Registered successfully.`, "success");
-      
-      setTeacherName("");
-      setTeacherEmail("");
-      setTeacherPassword("");
-      setSchoolName("");
-      setIsAuthModalOpen(false);
-      setActiveView("teacher-dashboard");
-    } catch (err) {
-      addToast(`Registration failed: ${err.message}`, "error");
-    }
-  };
-
-  const handleTeacherLogin = async (e) => {
-    e.preventDefault();
-    if (!teacherEmail.trim() || !teacherPassword.trim()) {
-      addToast("Please enter email and password.", "error");
-      return;
-    }
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: teacherEmail.trim(),
-        password: teacherPassword.trim()
-      });
-      if (error) throw error;
-      
-      addToast("Logged in successfully!", "success");
-      setTeacherEmail("");
-      setTeacherPassword("");
-      setIsAuthModalOpen(false);
-      setActiveView("teacher-dashboard");
-    } catch (err) {
-      addToast(`Login failed: ${err.message}`, "error");
-    }
-  };
-
-  const handleTeacherLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      setCurrentTeacher(null);
-      setStudents([]);
-      setProgress([]);
-      addToast("Logged out successfully.", "info");
-      setActiveView("landing-page");
-    } catch (err) {
-      addToast(`Logout failed: ${err.message}`, "error");
-    }
-  };
-
-  // Student PIN & Verification handlers
-  const handleStudentSelect = (student) => {
-    if (student.pin) {
-      setSelectedStudentForPin(student);
-      setPinInput("");
-      setPinError("");
-    } else {
-      loadStudentSession(student.id);
-    }
-  };
-
-  const handleVerifyPin = (e) => {
-    e.preventDefault();
-    if (!selectedStudentForPin) return;
-
-    if (pinInput === selectedStudentForPin.pin) {
-      const studentId = selectedStudentForPin.id;
-      setSelectedStudentForPin(null);
-      setPinInput("");
-      setPinError("");
-      loadStudentSession(studentId);
-    } else {
-      setPinError("Oops! Incorrect PIN. Please try again!");
-      setPinInput("");
-    }
-  };
-
-  // Student self-signup
-  const handleCreateStudentSelf = async (e) => {
-    e.preventDefault();
-    if (!selfName.trim()) return;
-
-    const teacherId = currentTeacher?.id || "00000000-0000-0000-0000-000000000000";
 
     const studentRecord = {
-      name: selfName.trim(),
-      language: selfLanguage,
+      name: registerName.trim(),
+      language: registerLanguage,
       difficulty: 1,
-      pin: selfPin.trim() || null,
-      grade: selfGrade,
-      unlocked_badges: ["first-steps"],
-      teacher_id: teacherId
+      pin: registerPassword.trim(), // password stored in pin text column
+      grade: registerGrade,
+      unlocked_badges: ["first-steps"]
     };
 
     let newStudent = null;
 
     try {
-      // Try to insert student. Handle grade column absence dynamically.
       try {
         const { data, error } = await supabase
           .from('students')
@@ -852,46 +703,144 @@ export default function App() {
         }
       }
 
+      // Automatically create a progress row
       const { error: progError } = await supabase
         .from('progress')
         .insert({
           student_id: newStudent.id,
           subject: "Mathematics",
           topic: "Fractions",
-          mastery_score: 0.0,
+          mastery_score: 0,
           total_attempts: 0,
           correct_attempts: 0
         });
-      if (progError) throw progError;
+      if (progError) console.warn("Could not insert DB progress row, relying on fallback:", progError.message);
 
+      // Add to state and save locally
       setStudents(prev => [...prev, newStudent]);
-      
-      addToast(`Added student ${selfName.trim()} successfully!`, "success");
-      setSelfName("");
-      setSelfPin("");
-      setIsAddingStudentSelf(false);
+      const newLocalProg = { student_id: newStudent.id, subject: "Mathematics", topic: "Fractions", mastery_score: 0, total_attempts: 0, correct_attempts: 0 };
+      setProgress(prev => [...prev, newLocalProg]);
 
-      loadStudentSession(newStudent.id);
+      // Login student
+      setActiveStudent(newStudent);
+      localStorage.setItem("tut_active_student", JSON.stringify(newStudent));
+      
+      // Sync list
+      const localRoster = JSON.parse(localStorage.getItem("tut_students") || "[]");
+      localStorage.setItem("tut_students", JSON.stringify([...localRoster, newStudent]));
+
+      addToast(`Welcome, ${newStudent.name}! Registration successful.`, "success");
+      setRegisterName("");
+      setRegisterPassword("");
+      setIsAuthModalOpen(false);
+      setActiveView("student-portal");
+      setActiveSubject(null);
     } catch (err) {
-      console.warn("Supabase create student failed, writing to localStorage:", err.message);
+      console.warn("Registration error, using local fallback:", err.message);
       const newId = "s-" + Date.now();
-      const localStudent = { ...studentRecord, id: newId };
-      const updatedStuds = [...students, localStudent];
-      const newLocalProg = { student_id: newId, subject: "Mathematics", topic: "Fractions", mastery_score: 0.0, total_attempts: 0, correct_attempts: 0 };
-      const updatedProg = [...progress, newLocalProg];
+      newStudent = { ...studentRecord, id: newId };
       
+      const updatedStuds = [...students, newStudent];
       setStudents(updatedStuds);
-      setProgress(updatedProg);
       localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
-      
-      addToast(`Added student ${selfName.trim()} successfully! (Local storage fallback)`, "success");
-      setSelfName("");
-      setSelfPin("");
-      setIsAddingStudentSelf(false);
 
-      loadStudentSession(newId);
+      const newLocalProg = { student_id: newId, subject: "Mathematics", topic: "Fractions", mastery_score: 0, total_attempts: 0, correct_attempts: 0 };
+      const updatedProg = [...progress, newLocalProg];
+      setProgress(updatedProg);
+      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+
+      setActiveStudent(newStudent);
+      localStorage.setItem("tut_active_student", JSON.stringify(newStudent));
+
+      addToast(`Welcome, ${newStudent.name}! Profile created successfully (Local).`, "success");
+      setRegisterName("");
+      setRegisterPassword("");
+      setIsAuthModalOpen(false);
+      setActiveView("student-portal");
+      setActiveSubject(null);
     }
+  };
+
+  const handleStudentLogin = async (e) => {
+    e.preventDefault();
+    if (!loginName.trim() || !loginPassword.trim()) {
+      addToast("Please enter name and password.", "error");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select()
+        .eq('name', loginName.trim())
+        .eq('pin', loginPassword.trim());
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const student = data[0];
+        if (student.grade === undefined || student.grade === null) {
+          const localRoster = JSON.parse(localStorage.getItem("tut_students") || "[]");
+          const localMatch = localRoster.find(s => s.name === student.name);
+          student.grade = localMatch ? localMatch.grade : 3;
+        }
+
+        loadStudentSession(student.id);
+        setActiveStudent(student);
+        localStorage.setItem("tut_active_student", JSON.stringify(student));
+        addToast(`Logged in successfully! Welcome back, ${student.name}.`, "success");
+        setLoginName("");
+        setLoginPassword("");
+        setIsAuthModalOpen(false);
+        setActiveView("student-portal");
+        setActiveSubject(null);
+        return;
+      }
+
+      // Check local storage fallback
+      const localRoster = JSON.parse(localStorage.getItem("tut_students") || "[]");
+      const matched = localRoster.find(s => s.name.toLowerCase() === loginName.trim().toLowerCase() && s.pin === loginPassword.trim());
+      if (matched) {
+        loadStudentSession(matched.id);
+        setActiveStudent(matched);
+        localStorage.setItem("tut_active_student", JSON.stringify(matched));
+        addToast(`Logged in successfully (Local)! Welcome back, ${matched.name}.`, "success");
+        setLoginName("");
+        setLoginPassword("");
+        setIsAuthModalOpen(false);
+        setActiveView("student-portal");
+        setActiveSubject(null);
+      } else {
+        addToast("Incorrect Student Name or Password. Please try again!", "error");
+      }
+    } catch (err) {
+      console.warn("Login fetch failed, trying local storage:", err.message);
+      const localRoster = JSON.parse(localStorage.getItem("tut_students") || "[]");
+      const matched = localRoster.find(s => s.name.toLowerCase() === loginName.trim().toLowerCase() && s.pin === loginPassword.trim());
+      if (matched) {
+        loadStudentSession(matched.id);
+        setActiveStudent(matched);
+        localStorage.setItem("tut_active_student", JSON.stringify(matched));
+        addToast(`Logged in successfully (Local)! Welcome back, ${matched.name}.`, "success");
+        setLoginName("");
+        setLoginPassword("");
+        setIsAuthModalOpen(false);
+        setActiveView("student-portal");
+        setActiveSubject(null);
+      } else {
+        addToast("Login failed. Check your name and password.", "error");
+      }
+    }
+  };
+
+  const handleStudentLogout = () => {
+    setActiveStudent(null);
+    setActiveSubject(null);
+    setActiveQuestion(null);
+    setChatMessages([]);
+    localStorage.removeItem("tut_active_student");
+    addToast("Logged out successfully.", "info");
+    setActiveView("landing-page");
   };
 
 
@@ -935,125 +884,6 @@ export default function App() {
     }
   }, [activeView, activeStudent]);
 
-  const handleCreateStudent = async (e) => {
-    e.preventDefault();
-    if (!addName.trim() || !currentTeacher) return;
-
-    const studentRecord = {
-      name: addName.trim(),
-      language: addLanguage,
-      difficulty: 1,
-      pin: addPin.trim() || null,
-      grade: addGrade,
-      unlocked_badges: ["first-steps"],
-      teacher_id: currentTeacher.id
-    };
-
-    let newStudent = null;
-
-    try {
-      // Try to insert student. Handle grade column absence dynamically.
-      try {
-        const { data, error } = await supabase
-          .from('students')
-          .insert(studentRecord)
-          .select()
-          .single();
-        if (error) throw error;
-        newStudent = data;
-      } catch (dbErr) {
-        if (dbErr.message.includes("grade") || dbErr.message.includes("column")) {
-          console.warn("DB lacks 'grade' column. Retrying insert without 'grade' column...");
-          const { grade, ...restRecord } = studentRecord;
-          const { data, error } = await supabase
-            .from('students')
-            .insert(restRecord)
-            .select()
-            .single();
-          if (error) throw error;
-          newStudent = { ...data, grade: studentRecord.grade };
-        } else {
-          throw dbErr;
-        }
-      }
-
-      const { error: progError } = await supabase
-        .from('progress')
-        .insert({
-          student_id: newStudent.id,
-          subject: "Mathematics",
-          topic: "Fractions",
-          mastery_score: 0.0,
-          total_attempts: 0,
-          correct_attempts: 0
-        });
-      if (progError) throw progError;
-
-      setStudents(prev => [...prev, newStudent]);
-
-      addToast(`Added student ${addName.trim()} to class registry!`, "success");
-      setAddName("");
-      setAddPin("");
-      setIsAddingStudent(false);
-    } catch (err) {
-      console.warn("Supabase add student failed, writing to localStorage:", err.message);
-      const newId = "s-" + Date.now();
-      const localStudent = { ...studentRecord, id: newId };
-      const updatedStuds = [...students, localStudent];
-      const newLocalProg = { student_id: newId, subject: "Mathematics", topic: "Fractions", mastery_score: 0.0, total_attempts: 0, correct_attempts: 0 };
-      const updatedProg = [...progress, newLocalProg];
-      
-      setStudents(updatedStuds);
-      setProgress(updatedProg);
-      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
-
-      addToast(`Added student ${addName.trim()} to registry! (Local storage fallback)`, "success");
-      setAddName("");
-      setAddPin("");
-      setIsAddingStudent(false);
-    }
-  };
-
-  // Delete Student
-  const handleDeleteStudent = async (id, name) => {
-    if (!confirm(`Are you sure you want to remove ${name} from class? This deletes their learning progress.`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-
-      setStudents(prev => prev.filter(s => s.id !== id));
-      setProgress(prev => prev.filter(p => p.student_id !== id));
-      setAttempts(prev => prev.filter(a => a.student_id !== id));
-
-      addToast(`Removed ${name} from roster.`, "info");
-      if (activeStudent && activeStudent.id === id) {
-        exitStudentSession();
-      }
-    } catch (err) {
-      console.warn("Supabase delete failed, syncing locally:", err.message);
-      const updatedStuds = students.filter(s => s.id !== id);
-      const updatedProg = progress.filter(p => p.student_id !== id);
-      const updatedAttempts = attempts.filter(a => a.student_id !== id);
-
-      setStudents(updatedStuds);
-      setProgress(updatedProg);
-      setAttempts(updatedAttempts);
-
-      localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
-      localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
-      localStorage.setItem("tut_attempts", JSON.stringify(updatedAttempts));
-
-      addToast(`Removed ${name} from roster (local storage fallback).`, "info");
-      if (activeStudent && activeStudent.id === id) {
-        exitStudentSession();
-      }
-    }
-  };
 
   // Reset student progress
   const handleResetProgress = async (id, name) => {
@@ -1107,11 +937,7 @@ export default function App() {
     }
   };
 
-  // Start student tutoring session
-  const startStudentSession = (student) => {
-    setActiveView("student-portal");
-    loadStudentSession(student.id);
-  };
+
 
   const loadStudentSession = async (studentId) => {
     const student = students.find(s => s.id === studentId);
@@ -1825,9 +1651,10 @@ Write a simple explanation explaining the correct concept.
   };
 
   const handleNavClick = (view) => {
-    if (view === "teacher-dashboard" && !currentTeacher) {
+    if ((view === "student-portal" || view === "profile") && !activeStudent) {
       setAuthTab("login");
       setIsAuthModalOpen(true);
+      addToast("Please log in to access the Student Portal or Profile.", "info");
       return;
     }
     setActiveView(view);
@@ -1906,30 +1733,22 @@ Write a simple explanation explaining the correct concept.
             >
               <Compass style={{ width: 18, height: 18 }} /> Home
             </button>
-            {currentTeacher && (
-              <button 
-                className={`nav-tab ${activeView === "teacher-dashboard" ? "active" : ""}`}
-                onClick={() => handleNavClick("teacher-dashboard")}
-              >
-                <ChalkboardUserIcon /> Teacher Dashboard
-              </button>
-            )}
-            {currentTeacher && (
-              <button 
-                className={`nav-tab ${activeView === "settings" ? "active" : ""}`}
-                onClick={() => handleNavClick("settings")}
-              >
-                <Settings style={{ width: 18, height: 18 }} /> Settings
-              </button>
-            )}
             <button 
               className={`nav-tab ${activeView === "student-portal" ? "active" : ""}`}
               onClick={() => handleNavClick("student-portal")}
             >
               <UserGraduateIcon /> Student Portal
             </button>
+            {activeStudent && (
+              <button 
+                className={`nav-tab ${activeView === "profile" ? "active" : ""}`}
+                onClick={() => handleNavClick("profile")}
+              >
+                <Settings style={{ width: 18, height: 18 }} /> Profile
+              </button>
+            )}
             
-            {!currentTeacher && (
+            {!activeStudent && (
               <>
                 <button 
                   className="btn btn-secondary" 
@@ -1948,13 +1767,13 @@ Write a simple explanation explaining the correct concept.
               </>
             )}
             
-            {currentTeacher && (
+            {activeStudent && (
               <div className="teacher-header-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99,102,241,0.08)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.15)', marginLeft: '1rem' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>👩‍🏫 {currentTeacher.name}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>👤 {activeStudent.name} (Grade {activeStudent.grade || 3})</span>
                 <button 
-                  onClick={handleTeacherLogout} 
+                  onClick={handleStudentLogout} 
                   style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
-                  title="Logout Teacher"
+                  title="Logout Student"
                 >
                   <LogOut style={{ width: 14, height: 14 }} />
                 </button>
@@ -1990,9 +1809,15 @@ Write a simple explanation explaining the correct concept.
                 <button className="btn btn-primary" onClick={() => handleNavClick("student-portal")}>
                   <GraduationCap style={{ width: 18, height: 18 }} /> Launch Student Portal
                 </button>
-                <button className="btn" onClick={() => handleNavClick("teacher-dashboard")}>
-                  <BookOpen style={{ width: 18, height: 18 }} /> Teacher Dashboard
-                </button>
+                {activeStudent ? (
+                  <button className="btn" onClick={() => handleNavClick("profile")}>
+                    <Settings style={{ width: 18, height: 18 }} /> View My Profile
+                  </button>
+                ) : (
+                  <button className="btn" onClick={() => { setAuthTab("login"); setIsAuthModalOpen(true); }}>
+                    <Unlock style={{ width: 18, height: 18 }} /> Login as Student
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2147,9 +1972,9 @@ Write a simple explanation explaining the correct concept.
               </div>
               <div className="glass-card feature-item">
                 <div className="feature-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.15)' }}><Gauge style={{ width: 22, height: 22 }} /></div>
-                <h3>Teacher Analytics & Progress Tracking</h3>
+                <h3>Student Portfolio & Progress Tracking</h3>
                 <p>
-                  EDUTOR isn't just for students. It provides teachers and parents with a robust diagnostic dashboard, displaying class-wide mastery statistics, individual progress charts, and historical attempt logs.
+                  EDUTOR logs every concept you learn. It provides students with a robust personal profile dashboard, displaying mastery scores, unlocked trophy achievements, and a historical concept learning log.
                 </p>
               </div>
             </div>
@@ -2286,189 +2111,7 @@ Write a simple explanation explaining the correct concept.
           </section>
         )}
 
-        {/* ================= VIEW: TEACHER DASHBOARD ================= */}
-        {activeView === "teacher-dashboard" && currentTeacher && (
-          <section className="view-section animate-fadeIn">
-            
-            {/* Stats Row */}
-            <div className="stats-grid">
-              <div className="glass-card stat-card">
-                <div className="stat-icon"><Users /></div>
-                <div className="stat-info">
-                  <h3>Total Students</h3>
-                  <p>{totalStudents}</p>
-                </div>
-              </div>
-              <div className="glass-card stat-card">
-                <div className="stat-icon"><Star /></div>
-                <div className="stat-info">
-                  <h3>Average Mastery</h3>
-                  <p>{avgMastery}%</p>
-                </div>
-              </div>
-              <div className="glass-card stat-card">
-                <div className="stat-icon"><Gauge /></div>
-                <div className="stat-info">
-                  <h3>Avg. Difficulty</h3>
-                  <p>Level {avgDifficulty}</p>
-                </div>
-              </div>
-            </div>
 
-            {/* Split layout */}
-            <div className="dashboard-layout">
-              {/* Roster list */}
-              <div className="glass-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <h2>Student Roster</h2>
-                  <button className="btn btn-primary" onClick={() => setIsAddingStudent(true)}>
-                    <Plus style={{ width: 16, height: 16 }} /> Add Student
-                  </button>
-                </div>
-
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Grade</th>
-                        <th>Language</th>
-                        <th>Current Difficulty</th>
-                        <th>Mastery Score</th>
-                        <th>Questions Solved</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rosterData.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem' }}>
-                            No students registered. Click "Add Student" to begin!
-                          </td>
-                        </tr>
-                      ) : (
-                        rosterData.map(s => {
-                          const letter = s.name.charAt(0).toUpperCase();
-                          return (
-                            <tr key={s.id}>
-                              <td>
-                                <div className="student-badge">
-                                  <div className="avatar">{letter}</div>
-                                  <span style={{ fontWeight: 600, color: '#fff' }}>{s.name}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <span style={{ fontWeight: 600, color: '#f59e0b' }}>
-                                  Grade {s.grade || 3}
-                                </span>
-                              </td>
-                              <td>
-                                <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.6rem', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                  {s.language}
-                                </span>
-                              </td>
-                              <td>
-                                <span className={`difficulty-badge difficulty-${s.difficulty}`}>
-                                  Level {s.difficulty}
-                                </span>
-                              </td>
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <div className="progress-container" style={{ width: '80px' }}>
-                                    <div className="progress-fill" style={{ width: `${s.mastery_score}%` }}></div>
-                                  </div>
-                                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{s.mastery_score}%</span>
-                                </div>
-                              </td>
-                              <td style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
-                                {s.total_attempts} attempts
-                              </td>
-                              <td>
-                                <div className="action-btns" style={{ justifyContent: 'flex-end' }}>
-                                  <button 
-                                    className="btn btn-primary" 
-                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                                    onClick={() => startStudentSession(s)}
-                                  >
-                                    <GraduationCap style={{ width: 14, height: 14 }} /> Tutor
-                                  </button>
-                                  <button 
-                                    className="btn" 
-                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                                    onClick={() => handleResetProgress(s.id, s.name)}
-                                  >
-                                    <RotateCcw style={{ width: 14, height: 14 }} />
-                                  </button>
-                                  <button 
-                                    className="btn btn-danger" 
-                                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
-                                    onClick={() => handleDeleteStudent(s.id, s.name)}
-                                  >
-                                    <Trash2 style={{ width: 14, height: 14 }} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Right Column: Charts */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div className="glass-card" style={{ padding: '1.5rem', height: '280px' }}>
-                  <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--color-text-muted)' }}>Class Mastery Scores</h3>
-                  <div style={{ position: 'relative', height: '200px', width: '100%' }}>
-                    {students.length > 0 ? (
-                      <Bar 
-                        data={masteryChartData} 
-                        options={{
-                          indexAxis: 'y',
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: { legend: { display: false } },
-                          scales: {
-                            x: { max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
-                            y: { grid: { display: false }, ticks: { color: '#fff', font: { family: 'Outfit', weight: '600' } } }
-                          }
-                        }} 
-                      />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', paddingTop: '3rem' }}>No student records</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="glass-card" style={{ padding: '1.5rem', height: '280px' }}>
-                  <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: 'var(--color-text-muted)' }}>Students by Difficulty</h3>
-                  <div style={{ position: 'relative', height: '200px', width: '100%' }}>
-                    {students.length > 0 ? (
-                      <Doughnut 
-                        data={diffChartData} 
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'right',
-                              labels: { color: '#9ca3af', font: { family: 'Outfit' } }
-                            }
-                          },
-                          cutout: '65%'
-                        }} 
-                      />
-                    ) : (
-                      <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', paddingTop: '3rem' }}>No student records</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* ================= VIEW: STUDENT PORTAL ================= */}
         {activeView === "student-portal" && (
@@ -2476,48 +2119,20 @@ Write a simple explanation explaining the correct concept.
             
             {/* Student Login Grid */}
             {!activeStudent && (
-              <div className="login-view">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
-                  <div>
-                    <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Who is learning today?</h2>
-                    <p style={{ color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                      Click on your name avatar to start your personal learning companion.
-                    </p>
-                  </div>
-                  <button className="btn btn-primary" onClick={() => setIsAddingStudentSelf(true)}>
-                    <Plus style={{ width: 16, height: 16 }} /> Create My Profile
+              <div className="glass-card" style={{ maxWidth: '500px', margin: '4rem auto', textAlign: 'center', padding: '3rem' }}>
+                <Users style={{ width: 64, height: 64, display: 'block', margin: '0 auto 1.5rem', opacity: 0.2, color: 'var(--primary)' }} />
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.75rem' }}>Access Denied</h2>
+                <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.75rem' }}>
+                  Please login or register a student account to access your adaptive learning dashboard.
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button className="btn btn-primary" onClick={() => { setAuthTab("login"); setIsAuthModalOpen(true); }}>
+                    Login
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => { setAuthTab("signup"); setIsAuthModalOpen(true); }}>
+                    Register
                   </button>
                 </div>
-
-                {students.length === 0 ? (
-                  <div style={{ marginTop: '3rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                    <Users style={{ width: 48, height: 48, display: 'block', margin: '0 auto 1rem', opacity: 0.15 }} />
-                    <p style={{ marginBottom: '1.5rem' }}>No student profiles registered yet.</p>
-                    <button className="btn btn-primary" onClick={() => setIsAddingStudentSelf(true)}>
-                      <Plus style={{ width: 16, height: 16 }} /> Create My Profile
-                    </button>
-                  </div>
-                ) : (
-                  <div className="login-grid">
-                    {students.map(s => {
-                      const letter = s.name.charAt(0).toUpperCase();
-                      return (
-                        <div key={s.id} className="glass-card student-card" onClick={() => handleStudentSelect(s)}>
-                          <div className="avatar" style={{ width: 64, height: 64, fontSize: '1.6rem', borderRadius: '18px', position: 'relative' }}>
-                            {letter}
-                            {s.pin && (
-                              <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#f59e0b', padding: '4px', borderRadius: '50%', display: 'flex', border: '2px solid #fff' }} title="PIN Protected">
-                                <Lock style={{ width: 10, height: 10, color: '#fff' }} />
-                              </div>
-                            )}
-                          </div>
-                          <h4 style={{ marginTop: '1rem', fontWeight: 700 }}>{s.name}</h4>
-                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Grade {s.grade || 3} • Level {s.difficulty} • {s.language}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
 
@@ -2531,8 +2146,8 @@ Write a simple explanation explaining the correct concept.
                       Choose a subject to learn today (Grade {activeStudent.grade || 3})
                     </p>
                   </div>
-                  <button className="btn btn-secondary" onClick={exitStudentSession}>
-                    <LogOut style={{ width: 14, height: 14 }} /> Switch Profile
+                  <button className="btn btn-secondary" onClick={handleStudentLogout}>
+                    <LogOut style={{ width: 14, height: 14 }} /> Log Out
                   </button>
                 </div>
 
@@ -3074,66 +2689,187 @@ Write a simple explanation explaining the correct concept.
           </section>
         )}
 
-        {/* ================= VIEW: SETTINGS ================= */}
-        {activeView === "settings" && currentTeacher && (
-          <section className="view-section" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <div className="glass-card">
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <Settings style={{ width: 24, height: 24, color: 'var(--primary)' }} />
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Teacher Settings</h2>
+        {/* ================= VIEW: STUDENT PROFILE ================= */}
+        {activeView === "profile" && activeStudent && (
+          <section className="view-section" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            
+            {/* Header info card */}
+            <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                <div className="avatar" style={{ width: 80, height: 80, fontSize: '2rem', borderRadius: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  {activeStudent.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '2.2rem', fontWeight: 800 }}>{activeStudent.name}'s Learning Profile</h2>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', marginTop: '0.2rem' }}>
+                    Grade {activeStudent.grade || 3} • Tutored in {activeStudent.language || "English"}
+                  </p>
+                </div>
               </div>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                Configure your Hugging Face inference key to enable real AI grading.
-              </p>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => handleResetProgress(activeStudent.id, activeStudent.name)}
+                >
+                  <RotateCcw style={{ width: 14, height: 14 }} /> Reset History
+                </button>
+                <button className="btn btn-primary" onClick={() => handleNavClick("student-portal")}>
+                  <GraduationCap style={{ width: 16, height: 16 }} /> Start Learning
+                </button>
+              </div>
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Account Details */}
-                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                  <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>👩‍🏫 Logged In Account</h4>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <div><strong>Name:</strong> {currentTeacher.name}</div>
-                    <div><strong>Email:</strong> {currentTeacher.email}</div>
-                    {currentTeacher.school && <div><strong>School:</strong> {currentTeacher.school}</div>}
+            {/* Metrics Grid */}
+            <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              <div className="glass-card stat-card">
+                <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.08)', color: 'var(--primary)', width: 44, height: 44, borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><GraduationCap /></div>
+                <div className="stat-info">
+                  <h3>Questions Solved</h3>
+                  <p>{attempts.filter(a => a.student_id === activeStudent.id).length} solved</p>
+                </div>
+              </div>
+              <div className="glass-card stat-card">
+                <div className="stat-icon" style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', width: 44, height: 44, borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Star /></div>
+                <div className="stat-info">
+                  <h3>Avg. Concept Score</h3>
+                  <p>
+                    {(() => {
+                      const studentAttempts = attempts.filter(a => a.student_id === activeStudent.id);
+                      return studentAttempts.length > 0
+                        ? Math.round(studentAttempts.reduce((acc, curr) => acc + (curr.understanding_score || 0), 0) / studentAttempts.length)
+                        : 0;
+                    })()}%
+                  </p>
+                </div>
+              </div>
+              <div className="glass-card stat-card">
+                <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.08)', color: '#f59e0b', width: 44, height: 44, borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Award /></div>
+                <div className="stat-info">
+                  <h3>Unlocked Badges</h3>
+                  <p>{activeStudent.unlocked_badges?.length || 1} awards</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content split */}
+            <div className="dashboard-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
+              {/* Attempts Log */}
+              <div className="glass-card">
+                <h2 style={{ marginBottom: '1.5rem' }}>Concept Learning Log</h2>
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Subject</th>
+                        <th>Question</th>
+                        <th>My Answer</th>
+                        <th>Evaluation Score</th>
+                        <th>Tutor Explanation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const studentAttempts = attempts.filter(a => a.student_id === activeStudent.id);
+                        if (studentAttempts.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="5" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2.5rem' }}>
+                                No learning records yet. Go to the student portal and solve some questions!
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return studentAttempts.map(att => (
+                          <tr key={att.id}>
+                            <td>
+                              <span style={{ background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.5rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                {att.subject_name || "Mathematics"}
+                              </span>
+                            </td>
+                            <td style={{ maxHeight: '80px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={att.question_text}>
+                              {att.question_text}
+                            </td>
+                            <td style={{ fontWeight: 600, color: 'var(--primary-light)' }}>
+                              {att.student_answer}
+                            </td>
+                            <td>
+                              <span className={`difficulty-badge ${att.understanding_score >= 80 ? 'difficulty-1' : att.understanding_score >= 50 ? 'difficulty-3' : 'difficulty-4'}`}>
+                                {att.understanding_score}% Score
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: '250px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }} title={att.tutor_explanation}>
+                              {att.tutor_explanation}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Sidebar items */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Badges Panel */}
+                <div className="glass-card" style={{ padding: '1.5rem' }}>
+                  <h3 style={{ marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><Trophy style={{ color: '#f59e0b', width: 20, height: 20 }} /> Unlocked Badges</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    {(activeStudent.unlocked_badges || ["first-steps"]).map(badgeId => {
+                      const badge = BADGES.find(b => b.id === badgeId) || { name: badgeId, emoji: "🎖️" };
+                      return (
+                        <div key={badgeId} className="badge-card" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }} title={badge.description}>
+                          <span>{badge.emoji}</span>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{badge.name}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* API Token Input */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Hugging Face Read Access Token</label>
-                  <input 
-                    type="password"
-                    className="form-control"
-                    value={hfTokenInput}
-                    onChange={(e) => setHfTokenInput(e.target.value)}
-                    placeholder="hf_..." 
-                  />
-                  <small style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', lineHeight: 1.4 }}>
-                    Providing your own Hugging Face token enables Llama-3-8B evaluations of student-written answers. Leaves fallback rule grading enabled if empty.
-                  </small>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                  <button 
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => {
-                      localStorage.setItem("tut_hf_token", hfTokenInput.trim());
-                      addToast("Settings saved successfully! Hugging Face Token updated.", "success");
-                    }}
-                  >
-                    Save Settings
-                  </button>
-                  <button 
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => {
-                      setHfTokenInput("");
-                      localStorage.removeItem("tut_hf_token");
-                      addToast("Hugging Face API Token cleared.", "info");
-                    }}
-                  >
-                    Clear Token
-                  </button>
+                {/* API Config Panel */}
+                <div className="glass-card" style={{ padding: '1.5rem' }}>
+                  <h3 style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><Sliders style={{ color: 'var(--primary)', width: 20, height: 20 }} /> API Key Settings</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 700 }}>Hugging Face Read Token</label>
+                      <input 
+                        type="password"
+                        className="form-control"
+                        value={hfTokenInput}
+                        onChange={(e) => setHfTokenInput(e.target.value)}
+                        placeholder="hf_..." 
+                        style={{ fontSize: '0.85rem', padding: '0.45rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-primary" 
+                        style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          localStorage.setItem("tut_hf_token", hfTokenInput.trim());
+                          addToast("Hugging Face API Token updated successfully!", "success");
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn btn-danger" 
+                        style={{ padding: '0.4rem', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          setHfTokenInput("");
+                          localStorage.removeItem("tut_hf_token");
+                          addToast("Hugging Face API Token cleared.", "info");
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', lineHeight: 1.3 }}>
+                      Providing your own token enables real Llama-3-8B concept evaluations.
+                    </small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3332,12 +3068,12 @@ Write a simple explanation explaining the correct concept.
         </div>
       )}
 
-      {/* Modal: Teacher Login & Registration */}
+      {/* Modal: Student Login & Registration */}
       {isAuthModalOpen && (
         <div className="modal-backdrop">
           <div className="glass-card modal" style={{ maxWidth: '500px', margin: '2rem auto' }}>
             <div className="modal-header">
-              <h3 className="modal-title">{authTab === 'login' ? 'Teacher Login' : 'Register / Sign Up'}</h3>
+              <h3 className="modal-title">{authTab === 'login' ? 'Student Login' : 'Student Registration'}</h3>
               <button className="modal-close" onClick={() => setIsAuthModalOpen(false)}>&times;</button>
             </div>
             
@@ -3361,18 +3097,18 @@ Write a simple explanation explaining the correct concept.
             </div>
 
             {authTab === 'login' ? (
-              <form onSubmit={handleTeacherLogin} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Welcome Back</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Access your students roster, learning progress logs, and settings.</p>
+              <form onSubmit={handleStudentLogin} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Welcome back, Student!</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Enter your student name and password to resume your personalized tutoring.</p>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email or Username</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Your Student Name</label>
                   <input 
                     type="text" 
                     required
                     className="form-control"
-                    value={teacherEmail}
-                    onChange={(e) => setTeacherEmail(e.target.value)}
-                    placeholder="teacher@school.com"
+                    value={loginName}
+                    onChange={(e) => setLoginName(e.target.value)}
+                    placeholder="e.g. Rahul"
                   />
                 </div>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -3381,8 +3117,8 @@ Write a simple explanation explaining the correct concept.
                     type="password" 
                     required
                     className="form-control"
-                    value={teacherPassword}
-                    onChange={(e) => setTeacherPassword(e.target.value)}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
                   />
                 </div>
@@ -3392,41 +3128,19 @@ Write a simple explanation explaining the correct concept.
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleTeacherSignup} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Create Teacher Account</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Sign up to manage class statistics and student learning tracks.</p>
+              <form onSubmit={handleStudentSignup} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Create Student Profile</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Sign up to unlock adaptive questions and accumulate learning trophies.</p>
                 
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Your Full Name</label>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Student Name (Username)</label>
                   <input 
                     type="text" 
                     required
                     className="form-control"
-                    value={teacherName}
-                    onChange={(e) => setTeacherName(e.target.value)}
-                    placeholder="e.g. Mrs. Jane Smith"
-                  />
-                </div>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>School or Institution Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    className="form-control"
-                    value={schoolName}
-                    onChange={(e) => setSchoolName(e.target.value)}
-                    placeholder="e.g. Oakridge Public School"
-                  />
-                </div>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email Address</label>
-                  <input 
-                    type="email" 
-                    required
-                    className="form-control"
-                    value={teacherEmail}
-                    onChange={(e) => setTeacherEmail(e.target.value)}
-                    placeholder="teacher@school.com"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    placeholder="e.g. Rahul"
                   />
                 </div>
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -3435,14 +3149,45 @@ Write a simple explanation explaining the correct concept.
                     type="password" 
                     required
                     className="form-control"
-                    value={teacherPassword}
-                    onChange={(e) => setTeacherPassword(e.target.value)}
-                    placeholder="Min 6 characters"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Enter password"
                   />
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Preferred Language</label>
+                  <select 
+                    className="form-control" 
+                    value={registerLanguage}
+                    onChange={(e) => setRegisterLanguage(e.target.value)}
+                  >
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi (हिंदी)</option>
+                    <option value="Telugu">Telugu (తెలుగు)</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Select Grade Level</label>
+                  <select 
+                    className="form-control" 
+                    value={registerGrade}
+                    onChange={(e) => setRegisterGrade(Number(e.target.value))}
+                  >
+                    <option value="1">1st Grade</option>
+                    <option value="2">2nd Grade</option>
+                    <option value="3">3rd Grade</option>
+                    <option value="4">4th Grade</option>
+                    <option value="5">5th Grade</option>
+                    <option value="6">6th Grade</option>
+                    <option value="7">7th Grade</option>
+                    <option value="8">8th Grade</option>
+                    <option value="9">9th Grade</option>
+                    <option value="10">10th Grade</option>
+                  </select>
                 </div>
                 <div className="modal-footer" style={{ marginTop: '1rem', padding: 0, border: 'none' }}>
                   <button type="button" className="btn" onClick={() => setIsAuthModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">Register Account</button>
+                  <button type="submit" className="btn btn-primary">Register & Learn!</button>
                 </div>
               </form>
             )}
