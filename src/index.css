@@ -1343,3 +1343,72 @@ td {
   line-height: 1.5;
   color: var(--color-text-muted);
 }
+
+/* Authentication Views */
+.auth-card {
+  padding: 2.5rem;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+}
+
+.auth-tab-btn {
+  font-family: var(--font-secondary);
+  font-size: 0.95rem;
+  transition: var(--transition-smooth);
+}
+
+.auth-tab-btn:hover {
+  color: var(--primary) !important;
+}
+
+.auth-tab-btn.active {
+  border-bottom: 3px solid var(--primary) !important;
+}
+
+/* Badge Cards in Trophy Room */
+.badge-card {
+  transition: var(--transition-smooth);
+}
+
+.badge-card.locked {
+  background: rgba(241, 245, 249, 0.5) !important;
+  border: 1px dashed #cbd5e1 !important;
+}
+
+.badge-card.locked .badge-icon {
+  opacity: 0.35;
+}
+
+.badge-card:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* Badge Unlock Popup */
+@keyframes slideInRight {
+  0% { transform: translateX(120%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+.badge-unlock-popup {
+  box-shadow: 0 15px 40px rgba(99, 102, 241, 0.25) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: slideInRight 0.4s ease-out forwards;
+}
+
+.badge-unlock-popup .badge-icon {
+  animation: wiggle 1s ease-in-out infinite;
+}
+
+/* Sandbox SVG Interactivity */
+svg path:hover, svg rect:hover {
+  filter: brightness(0.95);
+}

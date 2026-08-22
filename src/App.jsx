@@ -27,7 +27,15 @@ import {
   Compass,
   Heart,
   TrendingUp,
-  HelpCircle
+  HelpCircle,
+  Lock,
+  Unlock,
+  Award,
+  Trophy,
+  Settings,
+  Check,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { 
@@ -44,9 +52,42 @@ import {
 // Register ChartJS modules
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
+// Curated Achievements pool
+const BADGES = [
+  { id: "first-steps", name: "First Steps", desc: "Registered a learning profile", icon: "🎓", color: "#6366f1" },
+  { id: "correct-ans", name: "Fractions Explorer", desc: "Answered a fraction challenge correctly", icon: "🎯", color: "#10b981" },
+  { id: "level-climber", name: "Level Climber", desc: "Reached Difficulty Level 3", icon: "⚡", color: "#f59e0b" },
+  { id: "math-master", name: "Math Master", desc: "Reached Difficulty Level 5", icon: "🧠", color: "#ec4899" },
+  { id: "multilingual", name: "Multilingual Learner", desc: "Learned in Hindi or Telugu", icon: "🗣️", color: "#8b5cf6" },
+  { id: "visual-artist", name: "Visual Artist", desc: "Shaded a fraction in the Sandbox", icon: "🎨", color: "#06b6d4" }
+];
+
 // DEVELOPER CONFIGURATION: Place your Hugging Face read access token here (free READ access token)
 // This remains inside the source code (visible to developer, hidden from user).
 const DEVELOPER_HF_TOKEN = ""; // Hardcode developer token here
+
+// Dynamic configuration helper for API calls
+const getHFToken = () => {
+  return localStorage.getItem("tut_hf_token") || DEVELOPER_HF_TOKEN;
+};
+
+// Generates SVG path for a circle slice (donut chart / pizza slice)
+const getCircleSlicePath = (i, total) => {
+  if (total === 1) {
+    // Full circle path (since arc from angle 0 to 2*pi center overlaps)
+    return "M 100 100 m -80, 0 a 80,80 0 1,0 160,0 a 80,80 0 1,0 -160,0";
+  }
+  const angleStep = (2 * Math.PI) / total;
+  const startAngle = i * angleStep - Math.PI / 2; // Start at 12 o'clock
+  const endAngle = (i + 1) * angleStep - Math.PI / 2;
+  
+  const x1 = (100 + 80 * Math.cos(startAngle)).toFixed(2);
+  const y1 = (100 + 80 * Math.sin(startAngle)).toFixed(2);
+  const x2 = (100 + 80 * Math.cos(endAngle)).toFixed(2);
+  const y2 = (100 + 80 * Math.sin(endAngle)).toFixed(2);
+  
+  return `M 100 100 L ${x1} ${y1} A 80 80 0 0 1 ${x2} ${y2} Z`;
+};
 
 // Seeding initial realistic demo data if localStorage is empty
 const INITIAL_STUDENTS = [
@@ -214,6 +255,42 @@ export default function App() {
   const [addName, setAddName] = useState("");
   const [addLanguage, setAddLanguage] = useState("English");
 
+  // Teacher Authentication States
+  const [currentTeacher, setCurrentTeacher] = useState(() => {
+    try {
+      const stored = localStorage.getItem("tut_active_teacher");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [authTab, setAuthTab] = useState("login"); // "login" or "signup"
+  const [teacherEmail, setTeacherEmail] = useState("");
+  const [teacherPassword, setTeacherPassword] = useState("");
+  const [teacherName, setTeacherName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+
+  // Student PIN States
+  const [selectedStudentForPin, setSelectedStudentForPin] = useState(null);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [addPin, setAddPin] = useState(""); // PIN in teacher's add student modal
+  const [isAddingStudentSelf, setIsAddingStudentSelf] = useState(false);
+  const [selfName, setSelfName] = useState("");
+  const [selfLanguage, setSelfLanguage] = useState("English");
+  const [selfPin, setSelfPin] = useState("");
+
+  // HF Token & Settings states
+  const [hfTokenInput, setHfTokenInput] = useState(() => localStorage.getItem("tut_hf_token") || "");
+
+  // Sandbox States
+  const [sandboxShape, setSandboxShape] = useState("circle");
+  const [sandboxDenom, setSandboxDenom] = useState(4);
+  const [sandboxShadedSlices, setSandboxShadedSlices] = useState({ 0: true, 1: true });
+
+  // Achievements/Badges Popup
+  const [badgePopup, setBadgePopup] = useState(null);
+
   // Student Portal Chat Modes: challenge, custom-solve
   const [activeChatMode, setActiveChatMode] = useState("challenge"); 
   const [customQuestionText, setCustomQuestionText] = useState("");
@@ -295,6 +372,192 @@ export default function App() {
     }, 4500);
   };
 
+  // Achievements unlocking function
+  const unlockBadge = (studentId, badgeId) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const badges = student.unlocked_badges || [];
+    if (badges.includes(badgeId)) return;
+
+    const updatedBadges = [...badges, badgeId];
+    const updatedStudents = students.map(s => 
+      s.id === studentId ? { ...s, unlocked_badges: updatedBadges } : s
+    );
+
+    setStudents(updatedStudents);
+    localStorage.setItem("tut_students", JSON.stringify(updatedStudents));
+
+    if (activeStudent && activeStudent.id === studentId) {
+      setActiveStudent(prev => ({ ...prev, unlocked_badges: updatedBadges }));
+    }
+
+    const badge = BADGES.find(b => b.id === badgeId);
+    if (badge) {
+      setBadgePopup({ studentName: student.name, ...badge });
+      addToast(`🎉 ${student.name} unlocked achievement: ${badge.name}!`, "success");
+      setTimeout(() => setBadgePopup(null), 5000);
+    }
+  };
+
+  // Teacher Authentication handlers
+  const handleTeacherSignup = (e) => {
+    e.preventDefault();
+    if (!teacherName.trim() || !teacherEmail.trim() || !teacherPassword.trim()) {
+      addToast("Please fill in all required fields.", "error");
+      return;
+    }
+
+    const storedTeachers = JSON.parse(localStorage.getItem("tut_teachers") || "[]");
+    if (storedTeachers.some(t => t.email.toLowerCase() === teacherEmail.toLowerCase())) {
+      addToast("An account with this email already exists.", "error");
+      return;
+    }
+
+    const newTeacher = {
+      id: "t-" + Date.now(),
+      name: teacherName.trim(),
+      email: teacherEmail.trim(),
+      password: teacherPassword.trim(),
+      school: schoolName.trim(),
+      created_at: new Date().toISOString()
+    };
+
+    storedTeachers.push(newTeacher);
+    localStorage.setItem("tut_teachers", JSON.stringify(storedTeachers));
+    
+    setCurrentTeacher(newTeacher);
+    localStorage.setItem("tut_active_teacher", JSON.stringify(newTeacher));
+    addToast(`Welcome, Teacher ${newTeacher.name}!`, "success");
+    
+    setTeacherName("");
+    setTeacherEmail("");
+    setTeacherPassword("");
+    setSchoolName("");
+  };
+
+  const handleTeacherLogin = (e) => {
+    e.preventDefault();
+    if (!teacherEmail.trim() || !teacherPassword.trim()) {
+      addToast("Please enter email and password.", "error");
+      return;
+    }
+
+    const storedTeachers = JSON.parse(localStorage.getItem("tut_teachers") || "[]");
+    const teacher = storedTeachers.find(t => 
+      t.email.toLowerCase() === teacherEmail.toLowerCase() && 
+      t.password === teacherPassword
+    );
+
+    if (!teacher) {
+      addToast("Invalid email or password.", "error");
+      return;
+    }
+
+    setCurrentTeacher(teacher);
+    localStorage.setItem("tut_active_teacher", JSON.stringify(teacher));
+    addToast(`Welcome back, ${teacher.name}!`, "success");
+    
+    setTeacherEmail("");
+    setTeacherPassword("");
+  };
+
+  const handleTeacherLogout = () => {
+    setCurrentTeacher(null);
+    localStorage.removeItem("tut_active_teacher");
+    addToast("Logged out successfully.", "info");
+    setActiveView("landing-page");
+  };
+
+  // Student PIN & Verification handlers
+  const handleStudentSelect = (student) => {
+    if (student.pin) {
+      setSelectedStudentForPin(student);
+      setPinInput("");
+      setPinError("");
+    } else {
+      loadStudentSession(student.id);
+    }
+  };
+
+  const handleVerifyPin = (e) => {
+    e.preventDefault();
+    if (!selectedStudentForPin) return;
+
+    if (pinInput === selectedStudentForPin.pin) {
+      const studentId = selectedStudentForPin.id;
+      setSelectedStudentForPin(null);
+      setPinInput("");
+      setPinError("");
+      loadStudentSession(studentId);
+    } else {
+      setPinError("Oops! Incorrect PIN. Please try again!");
+      setPinInput("");
+    }
+  };
+
+  // Student self-signup
+  const handleCreateStudentSelf = (e) => {
+    e.preventDefault();
+    if (!selfName.trim()) return;
+
+    const newId = "s-" + Date.now();
+    const newStudent = {
+      id: newId,
+      name: selfName.trim(),
+      language: selfLanguage,
+      difficulty: 1,
+      pin: selfPin.trim(),
+      unlocked_badges: ["first-steps"],
+      created_at: new Date().toISOString()
+    };
+
+    const newProg = {
+      student_id: newId,
+      subject: "Mathematics",
+      topic: "Fractions",
+      mastery_score: 0.0,
+      total_attempts: 0,
+      correct_attempts: 0
+    };
+
+    const updatedStuds = [...students, newStudent];
+    const updatedProg = [...progress, newProg];
+
+    setStudents(updatedStuds);
+    setProgress(updatedProg);
+
+    localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
+    localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
+
+    addToast(`Added student ${selfName.trim()} successfully!`, "success");
+    setSelfName("");
+    setSelfPin("");
+    setIsAddingStudentSelf(false);
+
+    loadStudentSession(newId);
+  };
+
+  // Sandbox slice toggle & Denominator change handlers
+  const handleSandboxDenomChange = (val) => {
+    setSandboxDenom(val);
+    const newShaded = {};
+    const half = Math.floor(val / 2);
+    for (let i = 0; i < val; i++) {
+      newShaded[i] = i < half;
+    }
+    setSandboxShadedSlices(newShaded);
+  };
+
+  const toggleSandboxSlice = (i) => {
+    const updated = { ...sandboxShadedSlices, [i]: !sandboxShadedSlices[i] };
+    setSandboxShadedSlices(updated);
+    
+    if (activeStudent) {
+      unlockBadge(activeStudent.id, "visual-artist");
+    }
+  };
+
   // TTS helper: Audio read aloud
   const handleSpeak = (text) => {
     if (!window.speechSynthesis) {
@@ -344,6 +607,8 @@ export default function App() {
       name: addName.trim(),
       language: addLanguage,
       difficulty: 1,
+      pin: addPin.trim(),
+      unlocked_badges: [],
       created_at: new Date().toISOString()
     };
 
@@ -365,8 +630,12 @@ export default function App() {
     localStorage.setItem("tut_students", JSON.stringify(updatedStuds));
     localStorage.setItem("tut_progress", JSON.stringify(updatedProg));
 
+    // Unlock achievement for registering profile!
+    unlockBadge(newId, "first-steps");
+
     addToast(`Added student ${addName.trim()} to class registry!`, "success");
     setAddName("");
+    setAddPin("");
     setIsAddingStudent(false);
   };
 
@@ -555,9 +824,10 @@ JSON Schema:
 }
 `;
     try {
+      const token = getHFToken();
       const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
         headers: { 
-          Authorization: `Bearer ${DEVELOPER_HF_TOKEN}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         method: "POST",
@@ -605,9 +875,10 @@ Write a simple explanation explaining the correct concept.
 4. Keep it friendly, positive, and short (under 100 words).
 `;
     try {
+      const token = getHFToken();
       const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
         headers: { 
-          Authorization: `Bearer ${DEVELOPER_HF_TOKEN}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         method: "POST",
@@ -654,7 +925,7 @@ Write a simple explanation explaining the correct concept.
     let explanation = "";
     let isAi = false;
 
-    if (DEVELOPER_HF_TOKEN) {
+    if (getHFToken()) {
       const aiGraded = await callHuggingFaceAPI(activeQuestion.question_text, answer);
       if (aiGraded) {
         score = aiGraded.understanding_score;
@@ -689,6 +960,46 @@ Write a simple explanation explaining the correct concept.
       newDiff = Math.max(1, oldDiff - 1);
     }
 
+    // Check and trigger achievements
+    const badges = activeStudent.unlocked_badges || [];
+    const updatedBadges = [...badges];
+    if (score >= 80 && !updatedBadges.includes("correct-ans")) {
+      updatedBadges.push("correct-ans");
+      const badge = BADGES.find(b => b.id === "correct-ans");
+      if (badge) {
+        setBadgePopup({ studentName: activeStudent.name, ...badge });
+        addToast(`🎉 ${activeStudent.name} unlocked achievement: ${badge.name}!`, "success");
+        setTimeout(() => setBadgePopup(null), 5000);
+      }
+    }
+    if (newDiff >= 3 && !updatedBadges.includes("level-climber")) {
+      updatedBadges.push("level-climber");
+      const badge = BADGES.find(b => b.id === "level-climber");
+      if (badge) {
+        setBadgePopup({ studentName: activeStudent.name, ...badge });
+        addToast(`🎉 ${activeStudent.name} unlocked achievement: ${badge.name}!`, "success");
+        setTimeout(() => setBadgePopup(null), 5000);
+      }
+    }
+    if (newDiff === 5 && !updatedBadges.includes("math-master")) {
+      updatedBadges.push("math-master");
+      const badge = BADGES.find(b => b.id === "math-master");
+      if (badge) {
+        setBadgePopup({ studentName: activeStudent.name, ...badge });
+        addToast(`🎉 ${activeStudent.name} unlocked achievement: ${badge.name}!`, "success");
+        setTimeout(() => setBadgePopup(null), 5000);
+      }
+    }
+    if ((activeStudent.language === "Hindi" || activeStudent.language === "Telugu") && !updatedBadges.includes("multilingual")) {
+      updatedBadges.push("multilingual");
+      const badge = BADGES.find(b => b.id === "multilingual");
+      if (badge) {
+        setBadgePopup({ studentName: activeStudent.name, ...badge });
+        addToast(`🎉 ${activeStudent.name} unlocked achievement: ${badge.name}!`, "success");
+        setTimeout(() => setBadgePopup(null), 5000);
+      }
+    }
+
     // Append evaluation card
     setChatMessages(prev => [...prev, {
       id: Date.now() + 1,
@@ -706,7 +1017,7 @@ Write a simple explanation explaining the correct concept.
     }]);
 
     // Update Local Database records
-    const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff } : s);
+    const updatedStudents = students.map(s => s.id === activeStudent.id ? { ...s, difficulty: newDiff, unlocked_badges: updatedBadges } : s);
     setStudents(updatedStudents);
     localStorage.setItem("tut_students", JSON.stringify(updatedStudents));
 
@@ -776,11 +1087,12 @@ The student has asked you this custom fractions question: "${text}".`;
    - Final Fraction answer
 4. Keep it friendly, positive, and under 150 words. Do not use complex algebra.`;
 
-    if (DEVELOPER_HF_TOKEN) {
+    const token = getHFToken();
+    if (token) {
       try {
         const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct", {
           headers: { 
-            Authorization: `Bearer ${DEVELOPER_HF_TOKEN}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
           method: "POST",
@@ -937,7 +1249,7 @@ The student has asked you this custom fractions question: "${text}".`;
             <GraduationCap style={{ strokeWidth: 2.5 }} />
             <span>EDUTOR</span>
           </div>
-          <nav>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button 
               className={`nav-tab ${activeView === "landing-page" ? "active" : ""}`}
               onClick={() => handleNavClick("landing-page")}
@@ -950,13 +1262,39 @@ The student has asked you this custom fractions question: "${text}".`;
             >
               <ChalkboardUserIcon /> Teacher Dashboard
             </button>
+            {currentTeacher && (
+              <button 
+                className={`nav-tab ${activeView === "settings" ? "active" : ""}`}
+                onClick={() => handleNavClick("settings")}
+              >
+                <Settings style={{ width: 18, height: 18 }} /> Settings
+              </button>
+            )}
             <button 
               className={`nav-tab ${activeView === "student-portal" ? "active" : ""}`}
               onClick={() => handleNavClick("student-portal")}
             >
               <UserGraduateIcon /> Student Portal
             </button>
-            {/* Settings Tab Removed */}
+            <button 
+              className={`nav-tab ${activeView === "sandbox" ? "active" : ""}`}
+              onClick={() => handleNavClick("sandbox")}
+            >
+              <Sliders style={{ width: 18, height: 18 }} /> Sandbox
+            </button>
+            
+            {currentTeacher && (
+              <div className="teacher-header-badge" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99,102,241,0.08)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid rgba(99,102,241,0.15)', marginLeft: '1rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>👩‍🏫 {currentTeacher.name}</span>
+                <button 
+                  onClick={handleTeacherLogout} 
+                  style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+                  title="Logout Teacher"
+                >
+                  <LogOut style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            )}
           </nav>
         </div>
       </header>
@@ -1271,7 +1609,114 @@ The student has asked you this custom fractions question: "${text}".`;
 
         {/* ================= VIEW: TEACHER DASHBOARD ================= */}
         {activeView === "teacher-dashboard" && (
-          <section className="view-section">
+          !currentTeacher ? (
+            <section className="view-section animate-fadeIn" style={{ maxWidth: '500px', margin: '2rem auto' }}>
+              <div className="glass-card auth-card">
+                <div className="auth-tabs" style={{ display: 'flex', borderBottom: '1px solid #cbd5e1', marginBottom: '1.5rem' }}>
+                  <button 
+                    type="button"
+                    className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`}
+                    onClick={() => setAuthTab('login')}
+                    style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'login' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'login' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
+                  >
+                    Teacher Login
+                  </button>
+                  <button 
+                    type="button"
+                    className={`auth-tab-btn ${authTab === 'signup' ? 'active' : ''}`}
+                    onClick={() => setAuthTab('signup')}
+                    style={{ flex: 1, padding: '0.75rem', background: 'none', border: 'none', borderBottom: authTab === 'signup' ? '3px solid var(--primary)' : 'none', fontWeight: 700, color: authTab === 'signup' ? 'var(--primary)' : 'var(--color-text-muted)', cursor: 'pointer' }}
+                  >
+                    Register / Sign Up
+                  </button>
+                </div>
+
+                {authTab === 'login' ? (
+                  <form onSubmit={handleTeacherLogin} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Welcome Back</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Access your students roster, learning progress logs, and settings.</p>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Teacher Email or Username</label>
+                      <input 
+                        type="text" 
+                        required
+                        className="form-control"
+                        value={teacherEmail}
+                        onChange={(e) => setTeacherEmail(e.target.value)}
+                        placeholder="teacher@school.com"
+                      />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
+                      <input 
+                        type="password" 
+                        required
+                        className="form-control"
+                        value={teacherPassword}
+                        onChange={(e) => setTeacherPassword(e.target.value)}
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>
+                      <Unlock style={{ width: 16, height: 16 }} /> Unlock Dashboard
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleTeacherSignup} className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text)' }}>Create Teacher Account</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Join EDUTOR to manage classes, customize fractions lessons, and track metrics.</p>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Full Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        className="form-control"
+                        value={teacherName}
+                        onChange={(e) => setTeacherName(e.target.value)}
+                        placeholder="e.g. Mrs. Priya Verma"
+                      />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Email Address</label>
+                      <input 
+                        type="email" 
+                        required
+                        className="form-control"
+                        value={teacherEmail}
+                        onChange={(e) => setTeacherEmail(e.target.value)}
+                        placeholder="teacher@school.com"
+                      />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Password</label>
+                      <input 
+                        type="password" 
+                        required
+                        className="form-control"
+                        value={teacherPassword}
+                        onChange={(e) => setTeacherPassword(e.target.value)}
+                        placeholder="Choose a password"
+                      />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>School / Organization Name</label>
+                      <input 
+                        type="text" 
+                        className="form-control"
+                        value={schoolName}
+                        onChange={(e) => setSchoolName(e.target.value)}
+                        placeholder="e.g. KV School No. 1"
+                      />
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '0.8rem', marginTop: '0.5rem' }}>
+                      <Lock style={{ width: 16, height: 16 }} /> Create Account
+                    </button>
+                  </form>
+                )}
+              </div>
+            </section>
+          ) : (
+            <section className="view-section">
             
             {/* Stats Row */}
             <div className="stats-grid">
@@ -1444,9 +1889,9 @@ The student has asked you this custom fractions question: "${text}".`;
                 </div>
               </div>
             </div>
-
           </section>
-        )}
+        )
+      )}
 
         {/* ================= VIEW: STUDENT PORTAL ================= */}
         {activeView === "student-portal" && (
@@ -1455,27 +1900,42 @@ The student has asked you this custom fractions question: "${text}".`;
             {/* Student Login Grid */}
             {!activeStudent && (
               <div className="login-view">
-                <h2>Who is learning today?</h2>
-                <p style={{ color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
-                  Click on your name avatar to start your personal learning companion.
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Who is learning today?</h2>
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                      Click on your name avatar to start your personal learning companion.
+                    </p>
+                  </div>
+                  <button className="btn btn-primary" onClick={() => setIsAddingStudentSelf(true)}>
+                    <Plus style={{ width: 16, height: 16 }} /> Create My Profile
+                  </button>
+                </div>
 
                 {students.length === 0 ? (
-                  <div style={{ marginTop: '3rem', color: 'var(--color-text-muted)' }}>
-                    <Users style={{ width: 42, height: 42, display: 'block', margin: '0 auto 1rem', opacity: 0.1 }} />
-                    <p>No student accounts created. Go to the Teacher Dashboard to add a student!</p>
+                  <div style={{ marginTop: '3rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                    <Users style={{ width: 48, height: 48, display: 'block', margin: '0 auto 1rem', opacity: 0.15 }} />
+                    <p style={{ marginBottom: '1.5rem' }}>No student profiles registered yet.</p>
+                    <button className="btn btn-primary" onClick={() => setIsAddingStudentSelf(true)}>
+                      <Plus style={{ width: 16, height: 16 }} /> Create My Profile
+                    </button>
                   </div>
                 ) : (
                   <div className="login-grid">
                     {students.map(s => {
                       const letter = s.name.charAt(0).toUpperCase();
                       return (
-                        <div key={s.id} className="glass-card student-card" onClick={() => loadStudentSession(s.id)}>
-                          <div className="avatar" style={{ width: 64, height: 64, fontSize: '1.6rem', borderRadius: '18px' }}>
+                        <div key={s.id} className="glass-card student-card" onClick={() => handleStudentSelect(s)}>
+                          <div className="avatar" style={{ width: 64, height: 64, fontSize: '1.6rem', borderRadius: '18px', position: 'relative' }}>
                             {letter}
+                            {s.pin && (
+                              <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', background: '#f59e0b', padding: '4px', borderRadius: '50%', display: 'flex', border: '2px solid #fff' }} title="PIN Protected">
+                                <Lock style={{ width: 10, height: 10, color: '#fff' }} />
+                              </div>
+                            )}
                           </div>
-                          <h4>{s.name}</h4>
-                          <p>Level {s.difficulty} • {s.language}</p>
+                          <h4 style={{ marginTop: '1rem', fontWeight: 700 }}>{s.name}</h4>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Level {s.difficulty} • {s.language}</p>
                         </div>
                       );
                     })}
@@ -1634,9 +2094,17 @@ The student has asked you this custom fractions question: "${text}".`;
                     >
                       ❓ Ask Anything / Solve Homework
                     </button>
+                    <button 
+                      type="button"
+                      className={`btn btn-sm ${activeChatMode === "trophies" ? "btn-primary" : ""}`}
+                      onClick={() => setActiveChatMode("trophies")}
+                      style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                    >
+                      🏆 Trophy Room
+                    </button>
                   </div>
 
-                  {activeChatMode === "challenge" ? (
+                  {activeChatMode === "challenge" && (
                     <div className="chat-input-area">
                       <div className="question-card">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -1710,7 +2178,9 @@ The student has asked you this custom fractions question: "${text}".`;
                         </button>
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {activeChatMode === "custom-solve" && (
                     <div className="chat-input-area">
                       <div className="question-card" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.03) 0%, rgba(99,102,241,0.03) 100%)', border: '1px dashed #cbd5e1' }}>
                         <h5>Homework solver & Tutor</h5>
@@ -1793,6 +2263,70 @@ The student has asked you this custom fractions question: "${text}".`;
                       </div>
                     </div>
                   )}
+
+                  {activeChatMode === "trophies" && (
+                    <div className="trophy-room-view" style={{ padding: '0.5rem 0' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+                        <Trophy style={{ width: 24, height: 24, color: '#f59e0b', fill: '#f59e0b' }} />
+                        <h4 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Trophy Room & Badges</h4>
+                      </div>
+                      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
+                        Solve math challenges, unlock achievements, and fill up your trophy cabinet!
+                      </p>
+
+                      <div className="badges-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        {BADGES.map(badge => {
+                          const isUnlocked = (activeStudent?.unlocked_badges || []).includes(badge.id);
+                          return (
+                            <div 
+                              key={badge.id} 
+                              className={`badge-card glass-card ${isUnlocked ? 'unlocked' : 'locked'}`} 
+                              style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                textAlign: 'center', 
+                                padding: '1.25rem',
+                                background: isUnlocked ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                                opacity: isUnlocked ? 1 : 0.6,
+                                border: isUnlocked ? `2px solid ${badge.color}` : '1px solid var(--border-card)',
+                                boxShadow: isUnlocked ? `0 8px 20px ${badge.color}10` : 'none',
+                                borderRadius: '18px'
+                              }}
+                            >
+                              <div 
+                                className="badge-icon" 
+                                style={{ 
+                                  fontSize: '2.5rem', 
+                                  marginBottom: '0.75rem',
+                                  filter: isUnlocked ? 'none' : 'grayscale(100%)',
+                                  transform: isUnlocked ? 'scale(1.05)' : 'scale(1)'
+                                }}
+                              >
+                                {badge.icon}
+                              </div>
+                              <h5 style={{ fontSize: '0.98rem', fontWeight: 700, color: isUnlocked ? 'var(--color-text)' : 'var(--color-text-muted)', marginBottom: '0.35rem' }}>
+                                {badge.name}
+                              </h5>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', lineHeight: 1.4, flexGrow: 1 }}>
+                                {badge.desc}
+                              </p>
+                              
+                              {isUnlocked ? (
+                                <span style={{ marginTop: '0.75rem', fontSize: '0.72rem', fontWeight: 700, color: badge.color, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                  <CheckCircle2 style={{ width: 12, height: 12, fill: badge.color, color: '#fff' }} /> Unlocked
+                                </span>
+                              ) : (
+                                <span style={{ marginTop: '0.75rem', fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                                  <Lock style={{ width: 12, height: 12 }} /> Locked
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -1801,7 +2335,219 @@ The student has asked you this custom fractions question: "${text}".`;
           </section>
         )}
 
-        {/* Settings view removed */}
+        {/* ================= VIEW: SETTINGS ================= */}
+        {activeView === "settings" && currentTeacher && (
+          <section className="view-section" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <div className="glass-card">
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <Settings style={{ width: 24, height: 24, color: 'var(--primary)' }} />
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Teacher Settings</h2>
+              </div>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                Configure your Hugging Face inference key to enable real AI grading.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Account Details */}
+                <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                  <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.75rem', color: 'var(--color-text)' }}>👩‍🏫 Logged In Account</h4>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div><strong>Name:</strong> {currentTeacher.name}</div>
+                    <div><strong>Email:</strong> {currentTeacher.email}</div>
+                    {currentTeacher.school && <div><strong>School:</strong> {currentTeacher.school}</div>}
+                  </div>
+                </div>
+
+                {/* API Token Input */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Hugging Face Read Access Token</label>
+                  <input 
+                    type="password"
+                    className="form-control"
+                    value={hfTokenInput}
+                    onChange={(e) => setHfTokenInput(e.target.value)}
+                    placeholder="hf_..." 
+                  />
+                  <small style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', lineHeight: 1.4 }}>
+                    Providing your own Hugging Face token enables Llama-3-8B evaluations of student-written answers. Leaves fallback rule grading enabled if empty.
+                  </small>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      localStorage.setItem("tut_hf_token", hfTokenInput.trim());
+                      addToast("Settings saved successfully! Hugging Face Token updated.", "success");
+                    }}
+                  >
+                    Save Settings
+                  </button>
+                  <button 
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => {
+                      setHfTokenInput("");
+                      localStorage.removeItem("tut_hf_token");
+                      addToast("Hugging Face API Token cleared.", "info");
+                    }}
+                  >
+                    Clear Token
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ================= VIEW: SANDBOX ================= */}
+        {activeView === "sandbox" && (
+          <section className="view-section">
+            <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+                <Sliders style={{ width: 24, height: 24, color: 'var(--primary)' }} />
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Fractions Visual Sandbox</h2>
+              </div>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                An interactive playground to explore fractions. Tap on sections of the shapes to shade them and watch the fraction update dynamically!
+              </p>
+
+              <div className="sandbox-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
+                {/* Control Panel */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  {/* Shape selection */}
+                  <div>
+                    <label style={{ fontWeight: 700, fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>Select Shape</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        type="button"
+                        className={`btn ${sandboxShape === "circle" ? "btn-primary" : ""}`}
+                        style={{ flex: 1 }}
+                        onClick={() => setSandboxShape("circle")}
+                      >
+                        🍕 Pizza (Circle)
+                      </button>
+                      <button 
+                        type="button"
+                        className={`btn ${sandboxShape === "rectangle" ? "btn-primary" : ""}`}
+                        style={{ flex: 1 }}
+                        onClick={() => setSandboxShape("rectangle")}
+                      >
+                        🍫 Chocolate (Rectangle)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Slices slider */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label style={{ fontWeight: 700, fontSize: '0.9rem' }}>Slices (Denominator)</label>
+                      <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{sandboxDenom} Slices</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="1"
+                      max="12"
+                      className="form-control"
+                      style={{ padding: '0', cursor: 'pointer' }}
+                      value={sandboxDenom}
+                      onChange={(e) => handleSandboxDenomChange(parseInt(e.target.value))}
+                    />
+                  </div>
+
+                  {/* Fraction Math readouts */}
+                  {(() => {
+                    const numerator = Object.keys(sandboxShadedSlices).filter(k => sandboxShadedSlices[k]).length;
+                    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+                    const g = gcd(numerator, sandboxDenom);
+                    const simplifiedNumer = numerator / g;
+                    const simplifiedDenom = sandboxDenom / g;
+                    const hasEquiv = simplifiedDenom < sandboxDenom;
+                    
+                    return (
+                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>CURRENT FRACTION</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '2.5rem', fontWeight: 800 }}>
+                            <div>{numerator}</div>
+                            <div style={{ width: '40px', height: '3px', background: 'var(--color-text)', margin: '2px 0' }}></div>
+                            <div>{sandboxDenom}</div>
+                          </div>
+                          {hasEquiv && (
+                            <>
+                              <div style={{ fontSize: '1.8rem', color: 'var(--color-text-muted)' }}>=</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '2.5rem', fontWeight: 800, color: 'var(--success)' }}>
+                                <div>{simplifiedNumer}</div>
+                                <div style={{ width: '40px', height: '3px', background: 'var(--success)', margin: '2px 0' }}></div>
+                                <div>{simplifiedDenom}</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.92rem', fontWeight: 700, color: 'var(--color-text)', lineHeight: 1.4 }}>
+                          <div>English: {numerator} out of {sandboxDenom} parts shaded {hasEquiv && `(or ${simplifiedNumer}/${simplifiedDenom})`}</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                            Hindi: {sandboxDenom} में से {numerator} भाग रंगे हुए {hasEquiv && `(या ${simplifiedNumer}/${simplifiedDenom})`}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                            Telugu: {sandboxDenom} భాగాలలో {numerator} భాగాలు రంగు వేయబడ్డాయి {hasEquiv && `(లేదా ${simplifiedNumer}/${simplifiedDenom})`}
+                          </div>
+                        </div>
+
+                        {activeStudent && (
+                          <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle2 style={{ width: 12, height: 12, fill: 'var(--success)', color: '#fff' }} /> Logging play for student {activeStudent.name}!
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Interactive SVG Display */}
+                <div style={{ display: 'flex', justifyContent: 'center', background: '#fff', border: '1px solid #cbd5e1', padding: '2rem', borderRadius: '20px', minHeight: '260px', alignItems: 'center', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.02)' }}>
+                  {sandboxShape === "circle" ? (
+                    <svg viewBox="0 0 200 200" width="220" height="220">
+                      {/* Outline circle */}
+                      <circle cx="100" cy="100" r="82" fill="none" stroke="var(--primary)" strokeWidth="3" />
+                      {/* Slice shapes */}
+                      {Array.from({ length: sandboxDenom }).map((_, i) => (
+                        <path 
+                          key={i} 
+                          d={getCircleSlicePath(i, sandboxDenom)} 
+                          fill={sandboxShadedSlices[i] ? "var(--primary-light)" : "#f1f5f9"} 
+                          stroke="#ffffff" 
+                          strokeWidth="2" 
+                          onClick={() => toggleSandboxSlice(i)} 
+                          style={{ cursor: 'pointer', transition: 'fill 0.2s', outline: 'none' }} 
+                        />
+                      ))}
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 320 140" width="300" height="140">
+                      {Array.from({ length: sandboxDenom }).map((_, i) => (
+                        <rect 
+                          key={i}
+                          x={i * (300 / sandboxDenom) + 10}
+                          y={10}
+                          width={300 / sandboxDenom}
+                          height={120}
+                          fill={sandboxShadedSlices[i] ? "var(--primary-light)" : "#f1f5f9"}
+                          stroke="#ffffff"
+                          strokeWidth="2"
+                          onClick={() => toggleSandboxSlice(i)}
+                          style={{ cursor: 'pointer', transition: 'fill 0.2s' }}
+                        />
+                      ))}
+                    </svg>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
       </main>
 
@@ -1814,7 +2560,7 @@ The student has asked you this custom fractions question: "${text}".`;
               <button className="modal-close" onClick={() => setIsAddingStudent(false)}>&times;</button>
             </div>
             <form onSubmit={handleCreateStudent}>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label>Student Name</label>
                 <input 
                   type="text" 
@@ -1826,7 +2572,7 @@ The student has asked you this custom fractions question: "${text}".`;
                   autoFocus
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label>Tutoring Language</label>
                 <select 
                   className="form-control"
@@ -1838,11 +2584,136 @@ The student has asked you this custom fractions question: "${text}".`;
                   <option value="Telugu">Telugu</option>
                 </select>
               </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Login PIN (Optional, 4 Digits)</label>
+                <input 
+                  type="password" 
+                  maxLength="4"
+                  pattern="\d{4}"
+                  className="form-control" 
+                  value={addPin}
+                  onChange={(e) => setAddPin(e.target.value.replace(/\D/g, ""))}
+                  placeholder="e.g. 1234" 
+                />
+              </div>
               <div className="modal-footer">
                 <button type="button" className="btn" onClick={() => setIsAddingStudent(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Register Student</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Student PIN Verification */}
+      {selectedStudentForPin && (
+        <div className="modal-backdrop">
+          <div className="glass-card modal" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Enter Profile PIN</h3>
+              <button className="modal-close" onClick={() => setSelectedStudentForPin(null)}>&times;</button>
+            </div>
+            <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+                Please enter the 4-digit security PIN for **{selectedStudentForPin.name}**.
+              </p>
+              
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <input 
+                  type="password"
+                  maxLength="4"
+                  pattern="\d{4}"
+                  required
+                  className="form-control"
+                  style={{ width: '120px', letterSpacing: '0.75rem', fontSize: '1.8rem', textAlign: 'center', padding: '0.5rem' }}
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
+                  placeholder="••••"
+                  autoFocus
+                />
+                {pinError && (
+                  <span style={{ color: 'var(--error)', fontSize: '0.8rem', fontWeight: 600, marginTop: '0.5rem', textAlign: 'center' }}>
+                    {pinError}
+                  </span>
+                )}
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+                <button type="button" className="btn" onClick={() => setSelectedStudentForPin(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Verify & Enter</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Student Self Signup */}
+      {isAddingStudentSelf && (
+        <div className="modal-backdrop">
+          <div className="glass-card modal">
+            <div className="modal-header">
+              <h3 className="modal-title">Create Learning Profile</h3>
+              <button className="modal-close" onClick={() => setIsAddingStudentSelf(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleCreateStudentSelf}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>My Name</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={selfName}
+                  onChange={(e) => setSelfName(e.target.value)}
+                  placeholder="Type your name..." 
+                  required 
+                  autoFocus
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>My Language</label>
+                <select 
+                  className="form-control"
+                  value={selfLanguage}
+                  onChange={(e) => setSelfLanguage(e.target.value)}
+                >
+                  <option value="English">English</option>
+                  <option value="Hindi">Hindi (हिंदी)</option>
+                  <option value="Telugu">Telugu (తెలుగు)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Set 4-Digit Login PIN (Optional)</label>
+                <input 
+                  type="password" 
+                  maxLength="4"
+                  pattern="\d{4}"
+                  className="form-control" 
+                  value={selfPin}
+                  onChange={(e) => setSelfPin(e.target.value.replace(/\D/g, ""))}
+                  placeholder="e.g. 1234 (lock profile)" 
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn" onClick={() => setIsAddingStudentSelf(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Start Learning!</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Badge Unlock Celebration Overlay */}
+      {badgePopup && (
+        <div className="badge-unlock-popup" style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 1000, background: '#ffffff', border: `2px solid ${badgePopup.color}`, borderRadius: '20px', padding: '1.25rem', width: '300px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ fontSize: '3rem' }}>{badgePopup.icon}</div>
+          <div style={{ flexGrow: 1 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: badgePopup.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Achievement Unlocked!</div>
+            <h4 style={{ fontSize: '1rem', fontWeight: 800, margin: '2px 0', color: 'var(--color-text)' }}>{badgePopup.name}</h4>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.3 }}>{badgePopup.desc}</p>
+            {badgePopup.studentName && (
+              <span style={{ display: 'inline-block', marginTop: '0.25rem', background: `${badgePopup.color}15`, color: badgePopup.color, padding: '2px 6px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700 }}>
+                👤 {badgePopup.studentName}
+              </span>
+            )}
           </div>
         </div>
       )}
